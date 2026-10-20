@@ -68,7 +68,7 @@ export default function DefinicoesEcra() {
       {n && (
         <>
           <h2 className="h2">Estado dos sites</h2>
-          <p className="sub" style={{ marginBottom: 10 }}>Última pesquisa: {dataHora(n.atualizado)}. Corre sozinha de 3 em 3 horas, das 7h às 23h.</p>
+          <p className="sub" style={{ marginBottom: 10 }}>Última pesquisa: {dataHora(n.atualizado)}. Corre sozinha de hora em hora, das 7h às 2h.</p>
           <div className="card tabela-wrap">
             <table className="t">
               <thead><tr><th>Site</th><th>Estado</th><th className="dir">Anúncios lidos</th><th className="dir">Úteis</th></tr></thead>
