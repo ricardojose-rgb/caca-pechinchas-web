@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ExternalLink, Star, TrendingDown } from "lucide-react";
 import { DEMO, useDados } from "../data/store";
 import { euros, haQuanto, hoje, NOME_FONTE } from "../data/formato";
-import type { FavoritoVisto } from "../data/types";
+import type { Favorito, FavoritoVisto } from "../data/types";
 import { BotaoApagar, Foto, TagFonte, Vazio } from "../ui/components";
 
 const SITES = /(olx\.pt|vinted\.|wallapop\.com|custojusto\.pt)/i;
@@ -44,15 +44,27 @@ export default function FavoritosEcra() {
     ...c, favoritos: (c.favoritos ?? []).filter((f) => f.url !== url),
   }));
 
+  const saiu = (u: string) => ["vendido", "removido"].includes(d.vistos[u]?.estado ?? "");
+  const limparSairam = async () => {
+    const urls = new Set(lista.filter((f) => saiu(f.url)).map((f) => f.url));
+    const ok = await d.alterarFavoritos(`Limpar ${urls.size} favoritos que saíram`, (c) => ({
+      ...c, favoritos: (c.favoritos ?? []).filter((f) => !urls.has(f.url)),
+    }));
+    if (ok) d.avisar(`${urls.size} ${urls.size === 1 ? "favorito removido" : "favoritos removidos"}.`);
+  };
+
   const ordenados = [...lista].sort((a, b) => {
     const ord = (u: string) => ({ "disponível": 0, "reservado": 1, erro: 2, vendido: 3, removido: 4 } as Record<string, number>)[d.vistos[u]?.estado ?? "erro"] ?? 2;
     return ord(a.url) - ord(b.url) || b.adicionado.localeCompare(a.adicionado);
   });
 
+  const aVenda = ordenados.filter((f) => !saiu(f.url));
+  const sairam = ordenados.filter((f) => saiu(f.url));
+
   return (
     <>
       <div className="topbar"><h1>Favoritos</h1></div>
-      {DEMO && <div className="banner">Exemplos: escolhi um negócio de cada site para veres como fica. Os teus favoritos começam vazios.</div>}
+      {DEMO && <div className="banner">Exemplos: escolhi um negócio de cada site e simulei os estados vendido, reservado e retirado para veres o aspecto. Estes anúncios não estão realmente nesses estados.</div>}
       <p className="sub">Anúncios que estás a seguir. Em cada pesquisa vejo o preço e se ainda estão à venda, sem entrar na tua conta de nenhum site.</p>
 
       <form className="card form" style={{ marginBottom: 18 }} onSubmit={(e) => { e.preventDefault(); void adicionar(); }}>
@@ -71,43 +83,60 @@ export default function FavoritosEcra() {
       {ordenados.length === 0
         ? <Vazio titulo="Ainda não segues nenhum anúncio"><p>Cola o link de um anúncio acima, ou carrega na estrela de um negócio.</p></Vazio>
         : (
-          <div className="deals">
-            {ordenados.map((f) => {
-              const v = d.vistos[f.url];
-              const fonte = v?.fonte || fonteDoUrl(f.url);
-              const precos = v?.precos ?? [];
-              const inicial = precos[0]?.[1];
-              const atual = v?.preco ?? null;
-              const desceu = inicial != null && atual != null && atual < inicial ? inicial - atual : 0;
-              const fora = v?.estado === "vendido" || v?.estado === "removido";
-              return (
-                <article key={f.url} className="card deal" style={fora ? { opacity: 0.6 } : undefined}>
-                  <a href={f.url} target="_blank" rel="noreferrer" aria-label="Abrir anúncio"><Foto src={v?.foto ?? ""} fonte={fonte} /></a>
-                  <div className="corpo">
-                    <div className="preco">
-                      <span className="total">{atual != null ? euros(atual) : "—"}</span>
-                      {desceu > 0 && <span className="tag deal"><TrendingDown size={12} />−{euros(desceu)}</span>}
-                    </div>
-                    {inicial != null && desceu > 0 && <div className="decomp">Estava a {euros(inicial)}</div>}
-                    <a className="titulo clamp2" href={f.url} target="_blank" rel="noreferrer">{v?.titulo || f.titulo || f.url}</a>
-                    <div className="tags">
-                      <TagFonte fonte={fonte} />
-                      <EstadoTag v={v} />
-                    </div>
-                    <div className="pe">
-                      <span className="ref">{v?.verificado ? `Visto ${haQuanto(v.verificado)}` : `Seguido desde ${f.adicionado}`}{v?.erro ? ` · ${v.erro}` : ""}</span>
-                      <span className="acoes">
-                        <a className="btn ghost peq" href={f.url} target="_blank" rel="noreferrer"><ExternalLink size={15} />Abrir</a>
-                        <BotaoApagar texto="Deixar de seguir" onConfirmar={() => remover(f.url)} />
-                      </span>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+          <>
+            {aVenda.length > 0 && <div className="deals">{aVenda.map((f) => <CartaoFavorito key={f.url} f={f} onRemover={() => remover(f.url)} />)}</div>}
+            {aVenda.length === 0 && <Vazio titulo="Nenhum dos teus favoritos está à venda"><p>Os que saíram estão em baixo.</p></Vazio>}
+            {sairam.length > 0 && (
+              <>
+                <div className="seccao">
+                  <h2 className="h2">Já não estão à venda ({sairam.length})</h2>
+                  <BotaoApagar texto="Limpar todos" onConfirmar={() => void limparSairam()} />
+                </div>
+                <div className="deals">{sairam.map((f) => <CartaoFavorito key={f.url} f={f} onRemover={() => remover(f.url)} />)}</div>
+              </>
+            )}
+          </>
         )}
       {lista.length > 0 && <p className="small muted" style={{ marginTop: 14 }}>{lista.length} {lista.length === 1 ? "anúncio" : "anúncios"} em {new Set(lista.map((f) => NOME_FONTE[fonteDoUrl(f.url)] ?? "Loja")).size} sites.</p>}
     </>
+  );
+}
+
+function CartaoFavorito({ f, onRemover }: { f: Favorito; onRemover: () => void }) {
+  const d = useDados();
+  const v = d.vistos[f.url];
+  const fonte = v?.fonte || fonteDoUrl(f.url);
+  const precos = v?.precos ?? [];
+  const inicial = precos[0]?.[1];
+  const atual = v?.preco ?? null;
+  const desceu = inicial != null && atual != null && atual < inicial ? inicial - atual : 0;
+  const fora = v?.estado === "vendido" || v?.estado === "removido";
+  const reservado = v?.estado === "reservado";
+  const faixa = v?.estado === "vendido" ? { texto: "VENDIDO", tom: "fora" as const }
+    : v?.estado === "removido" ? { texto: "JÁ NÃO ESTÁ À VENDA", tom: "fora" as const }
+      : reservado ? { texto: "RESERVADO", tom: "reservado" as const } : undefined;
+  return (
+    <article className={`card deal ${fora ? "saiu" : ""} ${reservado ? "reservado" : ""}`}>
+      <a href={f.url} target="_blank" rel="noreferrer" aria-label="Abrir anúncio"><Foto src={v?.foto ?? ""} fonte={fonte} faixa={faixa} /></a>
+      <div className="corpo">
+        <div className="preco">
+          <span className="total">{atual != null ? euros(atual) : "—"}</span>
+          {!fora && desceu > 0 && <span className="tag deal"><TrendingDown size={12} />−{euros(desceu)}</span>}
+        </div>
+        {!fora && inicial != null && desceu > 0 && <div className="decomp">Estava a {euros(inicial)}</div>}
+        <a className="titulo clamp2" href={f.url} target="_blank" rel="noreferrer">{v?.titulo || f.titulo || f.url}</a>
+        <div className="tags">
+          <TagFonte fonte={fonte} />
+          <EstadoTag v={v} />
+        </div>
+        <div className="pe">
+          <span className="ref">{v?.verificado ? `${fora ? "Saiu, visto" : "Visto"} ${haQuanto(v.verificado)}` : `Seguido desde ${f.adicionado}`}{v?.erro ? ` · ${v.erro}` : ""}</span>
+          <span className="acoes">
+            {!fora && <a className="btn ghost peq" href={f.url} target="_blank" rel="noreferrer"><ExternalLink size={15} />Abrir</a>}
+            <BotaoApagar texto={fora ? "Remover" : "Deixar de seguir"} onConfirmar={onRemover} />
+          </span>
+        </div>
+      </div>
+    </article>
   );
 }

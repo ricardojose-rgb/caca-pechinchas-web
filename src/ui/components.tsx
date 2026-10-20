@@ -19,14 +19,17 @@ export function TagFonte({ fonte }: { fonte: string }) {
   return <span className="tag"><PontoFonte fonte={fonte} />{NOME_FONTE[fonte] ?? fonte}</span>;
 }
 
-/** Foto do anúncio; se não carregar, mostra as iniciais do site. */
-export function Foto({ src, fonte }: { src: string; fonte: string }) {
+/** Foto do anúncio; se não carregar, mostra as iniciais do site.
+ *  Com `faixa`, mostra uma faixa na diagonal (ex.: VENDIDO) e a foto a cinzento. */
+export function Foto({ src, fonte, faixa }: { src: string; fonte: string; faixa?: { texto: string; tom: "fora" | "reservado" } }) {
   const [falhou, setFalhou] = useState(!src);
   useEffect(() => setFalhou(!src), [src]);
+  const apagada = faixa?.tom === "fora";
   return (
-    <div className="foto">
+    <div className={`foto ${apagada ? "apagada" : ""}`}>
       {!falhou && <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFalhou(true)} />}
       {falhou && <div className="mono" style={{ color: `var(--s-${fonte}, var(--muted))` }}>{(NOME_FONTE[fonte] ?? fonte).slice(0, 3).toUpperCase()}</div>}
+      {faixa && <div className={`faixa ${faixa.tom}`}>{faixa.texto}</div>}
     </div>
   );
 }
