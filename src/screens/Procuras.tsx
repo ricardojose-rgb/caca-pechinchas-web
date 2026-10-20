@@ -6,7 +6,7 @@ import type { Categoria, Procura } from "../data/types";
 import { BotaoApagar, Marcas, Switch, Vazio } from "../ui/components";
 
 const NOME_CAT: Record<Categoria, string> = { ssd: "SSD", ram: "Memória RAM", pecas: "PC às peças", generico: "Outro produto" };
-const CAP_SSD = [128, 250, 500, 1000, 2000, 4000];
+const CAP_SSD = [64, 128, 180, 250, 500, 750, 1000, 2000, 4000];
 const CAP_RAM = [4, 8, 16, 32, 64];
 const capTexto = (c: number) => (c >= 1000 ? `${c / 1000} TB` : `${c} GB`);
 
@@ -212,7 +212,7 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
           <>
             <div className="campo"><span className="rot">Capacidade</span>
               <Marcas opcoes={CAP_SSD} valor={capacidades} onChange={setCapacidades} rotulo={capTexto} />
-              <span className="ajuda">240/256 GB contam como 250; 480/512 GB como 500.</span></div>
+              <span className="ajuda">Tamanhos parecidos contam juntos: 120/128 GB · 230–256 GB · 450–512 GB · 750/800 GB · 960 GB–1 TB · 1,92–2 TB. A pesquisa inclui-os sozinha.</span></div>
             <div className="campo"><span className="rot">Tipo (vazio = todos)</span>
               <Marcas opcoes={["SATA", "NVMe", "M.2 SATA"]} valor={interfaces} onChange={setInterfaces} /></div>
             <label className="campo" style={{ display: "flex", gap: 10, alignItems: "center" }}>
