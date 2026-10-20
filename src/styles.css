@@ -233,3 +233,13 @@ code.k { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; fon
 .deal.reservado { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--deal) 50%, transparent); }
 .seccao { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 28px 0 12px; }
 .seccao .h2 { margin: 0; flex: 1; }
+
+/* Formulários: nada pode alargar a página */
+.form > *, .form .grelha > * { min-width: 0; }
+.campo .ajuda.aviso { color: var(--deal); }
+.sugestao {
+  display: block; text-align: left; white-space: normal; overflow-wrap: anywhere;
+  padding: 8px 12px; border-radius: 10px; background: var(--surface-2); color: var(--muted); font-size: 12.5px; font-weight: 700;
+}
+.sugestao span { color: var(--primary); }
+.sugestao:hover { background: var(--surface-3); }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pencil, Plus } from "lucide-react";
 import { aPesquisar, useDados } from "../data/store";
 import { eurosCurto, listaDeTexto, slug } from "../data/formato";
-import { sugerirTermos } from "../data/sugestoes";
+import { MAX_TERMOS, sugerirTermos } from "../data/sugestoes";
 import type { Categoria, Procura } from "../data/types";
 import { BotaoApagar, Marcas, Switch, Vazio } from "../ui/components";
 
@@ -204,11 +204,21 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
           <span className="ajuda">
             {termosManuais ? "Editados por ti." : "Preenchido sozinho a partir do nome e das opções; podes mudar à vontade."}
             {" "}Separados por vírgulas. Erros comuns (sdd, disco ssd…) e tamanhos parecidos entram sozinhos na pesquisa.
-            {termosManuais && textoSugestao && termos !== textoSugestao && (
-              <> <button type="button" className="btn ghost peq" style={{ padding: "2px 8px" }}
-                         onClick={() => { setTermos(textoSugestao); setTermosManuais(false); }}>Usar sugestão: {textoSugestao}</button></>
-            )}
           </span>
+          {(() => {
+            const n = listaDeTexto(termos).length;
+            return n > 0 && (
+              <span className={`ajuda ${n > MAX_TERMOS ? "aviso" : ""}`}>
+                {n} {n === 1 ? "termo" : "termos"} × 4 sites = {n * 4} pesquisas.
+                {n > MAX_TERMOS && " São muitas: cada pesquisa fica mais lenta e gasta mais minutos do GitHub. Tenta ficar pelos 8 termos."}
+              </span>
+            );
+          })()}
+          {termosManuais && textoSugestao && termos !== textoSugestao && (
+            <button type="button" className="sugestao" onClick={() => { setTermos(textoSugestao); setTermosManuais(false); }}>
+              Usar a sugestão: <span>{textoSugestao}</span>
+            </button>
+          )}
         </div>
 
         <div className="grelha">

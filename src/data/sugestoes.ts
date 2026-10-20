@@ -15,6 +15,9 @@ const GENERICAS = [
   "objetiva", "relogio", "coluna", "colunas", "usado", "usada", "barato", "barata",
 ];
 
+/** Cada termo é pesquisado nos 4 sites; acima disto a pesquisa fica lenta. */
+export const MAX_TERMOS = 8;
+
 const normalizar = (t: string) =>
   t.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 
@@ -37,18 +40,19 @@ export function sugerirTermos(d: DadosSugestao): string[] {
       for (const tam of TAMANHOS_IRMAOS[c] ?? [`${c}gb`]) t.push(`ssd ${tam}`);
       if (d.interfaces.includes("NVMe")) t.push(`nvme ${(TAMANHOS_IRMAOS[c] ?? [`${c}gb`]).slice(-1)[0]}`);
     }
-    return unicos(t);
+    return unicos(t).slice(0, MAX_TERMOS);
   }
   if (d.categoria === "ram") {
     const t: string[] = [];
-    const geracoes = d.ddr.length ? d.ddr : ["DDR4"];
-    for (const c of d.capacidades)
-      for (const g of geracoes.map((x) => x.toLowerCase())) {
-        t.push(`ram ${g} ${c}gb`, `memoria ${g} ${c}gb`);
-        if (c >= 8) t.push(`${g} 2x${c / 2}gb`);
-        if (d.formatos.length === 1 && d.formatos[0] === "portátil") t.push(`sodimm ${g} ${c}gb`);
-      }
-    return unicos(t);
+    const geracoes = (d.ddr.length ? d.ddr : ["DDR4"]).map((x) => x.toLowerCase());
+    const combinacoes = d.capacidades.length * geracoes.length;
+    const portatil = d.formatos.length === 1 && d.formatos[0] === "portátil";
+    const pares = d.capacidades.flatMap((c) => geracoes.map((g) => [c, g] as const));
+    // primeiro um termo por combinação (todas ficam cobertas), depois as outras formas de escrever
+    for (const [c, g] of pares) t.push(portatil ? `sodimm ${g} ${c}gb` : `ram ${g} ${c}gb`);
+    for (const [c, g] of pares) if (c >= 8) t.push(`${g} 2x${c / 2}gb`);
+    if (combinacoes <= 2) for (const [c, g] of pares) t.push(`memoria ${g} ${c}gb`);
+    return unicos(t).slice(0, Math.max(MAX_TERMOS, pares.length));
   }
   if (d.categoria === "pecas") {
     return ["portatil ssd", "computador ssd", "mini pc ssd", "ordenador portatil ssd"];
