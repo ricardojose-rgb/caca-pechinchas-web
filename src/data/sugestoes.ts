@@ -30,6 +30,9 @@ export interface DadosSugestao {
   interfaces: string[];
   ddr: string[];
   formatos: string[];
+  polegadas?: number[];
+  resolucoes?: string[];
+  hzMin?: number;
 }
 
 /** Termos de pesquisa sugeridos a partir do nome e das opções escolhidas. */
@@ -53,6 +56,13 @@ export function sugerirTermos(d: DadosSugestao): string[] {
     for (const [c, g] of pares) if (c >= 8) t.push(`${g} 2x${c / 2}gb`);
     if (combinacoes <= 2) for (const [c, g] of pares) t.push(`memoria ${g} ${c}gb`);
     return unicos(t).slice(0, Math.max(MAX_TERMOS, pares.length));
+  }
+  if (d.categoria === "monitor") {
+    const t = (d.polegadas ?? []).map((p) => `monitor ${p}`);
+    if ((d.polegadas ?? []).includes(24)) t.push("monitor 23.8");
+    for (const r of d.resolucoes ?? []) if (r !== "1080p") t.push(`monitor ${r.toLowerCase()}`);
+    if ((d.hzMin ?? 0) >= 120) t.push(`monitor ${d.hzMin}hz`);
+    return unicos(t).slice(0, MAX_TERMOS);
   }
   if (d.categoria === "pecas") {
     return ["portatil ssd", "computador ssd", "mini pc ssd", "ordenador portatil ssd"];

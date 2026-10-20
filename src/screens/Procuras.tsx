@@ -6,9 +6,12 @@ import { MAX_TERMOS, sugerirTermos } from "../data/sugestoes";
 import type { Categoria, Procura } from "../data/types";
 import { BotaoApagar, Marcas, Switch, Vazio } from "../ui/components";
 
-const NOME_CAT: Record<Categoria, string> = { ssd: "SSD", ram: "Memória RAM", pecas: "PC às peças", generico: "Outro produto" };
+const NOME_CAT: Record<Categoria, string> = { ssd: "SSD", ram: "Memória RAM", monitor: "Monitor", pecas: "PC às peças", generico: "Outro produto" };
 const CAP_SSD = [64, 128, 180, 250, 500, 750, 1000, 2000, 4000];
 const CAP_RAM = [4, 8, 16, 32, 64];
+const POLEGADAS = [19, 22, 24, 27, 32, 34];
+const RESOLUCOES = ["1080p", "1440p", "4K"];
+const HZ = [0, 75, 120, 144, 165, 240];
 const capTexto = (c: number) => (c >= 1000 ? `${c / 1000} TB` : `${c} GB`);
 
 export default function ProcurasEcra() {
@@ -100,6 +103,9 @@ function resumoFiltros(p: Procura): string {
   if (p.interfaces?.length) partes.push(p.interfaces.join("/"));
   if (p.ddr?.length) partes.push(p.ddr.join("/"));
   if (p.formatos?.length) partes.push(p.formatos.join("/"));
+  if (p.polegadas?.length) partes.push(p.polegadas.map((x) => `${x}"`).join("/"));
+  if (p.resolucoes?.length) partes.push(p.resolucoes.join("/"));
+  if (p.hz_min) partes.push(`${p.hz_min} Hz ou mais`);
   if (p.obrigatorio?.length) partes.push(`com ${p.obrigatorio.join(" + ")}`);
   if (p.excluir?.length) partes.push(`sem ${p.excluir.join(", ")}`);
   if (p.categoria === "pecas") partes.push(`margem mínima ${p.margem_minima ?? 15} €`);
@@ -124,11 +130,14 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
   const [obrigatorio, setObrigatorio] = useState((inicial?.obrigatorio ?? []).join(", "));
   const [excluir, setExcluir] = useState((inicial?.excluir ?? []).join(", "));
   const [variantes, setVariantes] = useState(Object.entries(inicial?.variantes ?? {}).map(([k, v]) => `${k} = ${v}`).join("\n"));
+  const [polegadas, setPolegadas] = useState<number[]>(inicial?.polegadas ?? []);
+  const [resolucoes, setResolucoes] = useState<string[]>(inicial?.resolucoes ?? []);
+  const [hzMin, setHzMin] = useState<number>(inicial?.hz_min ?? 0);
   const [margem, setMargem] = useState(String(inicial?.margem_minima ?? 15));
   // os termos preenchem-se sozinhos até os editares à mão (numa procura existente, ficam os teus)
   const [termosManuais, setTermosManuais] = useState(!!inicial);
-  const sugestao = useMemo(() => sugerirTermos({ nome, categoria, capacidades, interfaces, ddr, formatos }),
-    [nome, categoria, capacidades, interfaces, ddr, formatos]);
+  const sugestao = useMemo(() => sugerirTermos({ nome, categoria, capacidades, interfaces, ddr, formatos, polegadas, resolucoes, hzMin }),
+    [nome, categoria, capacidades, interfaces, ddr, formatos, polegadas, resolucoes, hzMin]);
   useEffect(() => { if (!termosManuais) setTermos(sugestao.join(", ")); }, [sugestao, termosManuais]);
   const textoSugestao = sugestao.join(", ");
   const [erro, setErro] = useState("");
@@ -142,6 +151,7 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
     if (listaTermos.length === 0) return setErro("Escreve pelo menos um termo de pesquisa.");
     if (!Number.isFinite(max) || max <= 0) return setErro("Escreve o preço máximo que pagavas.");
     if ((categoria === "ssd" || categoria === "ram") && capacidades.length === 0) return setErro("Escolhe pelo menos uma capacidade.");
+    if (categoria === "monitor" && polegadas.length === 0) return setErro("Escolhe pelo menos um tamanho.");
 
     let id = inicial?.id ?? slug(nome);
     if (!inicial) { let n = 2; const base = id; while (existentes.includes(id)) id = `${base}-${n++}`; }
@@ -149,12 +159,18 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
     // mantém campos que o site não edita (ex.: páginas, desconto_minimo)
     const p: Procura = { ...(inicial ?? {}), id, nome: nome.trim(), categoria, termos: listaTermos, preco_max: max,
       ativa: inicial?.ativa ?? true } as Procura;
-    for (const k of ["preco_min", "capacidades", "interfaces", "incluir_externos", "ddr", "formatos", "obrigatorio", "excluir", "variantes", "margem_minima"]) delete p[k];
+    for (const k of ["preco_min", "capacidades", "interfaces", "incluir_externos", "ddr", "formatos", "obrigatorio", "excluir", "variantes", "margem_minima", "polegadas", "resolucoes", "hz_min"]) delete p[k];
     if (min > 0) p.preco_min = min;
     if (categoria === "ssd") {
       p.capacidades = [...capacidades].sort((a, b) => a - b);
       if (interfaces.length) p.interfaces = interfaces;
       if (externos) p.incluir_externos = true;
+    } else if (categoria === "monitor") {
+      p.polegadas = [...polegadas].sort((a, b) => a - b);
+      if (resolucoes.length) p.resolucoes = resolucoes;
+      if (hzMin > 0) p.hz_min = hzMin;
+      const exc = listaDeTexto(excluir);
+      if (exc.length) p.excluir = exc;
     } else if (categoria === "pecas") {
       const m = Number(margem.replace(",", "."));
       p.margem_minima = Number.isFinite(m) && m >= 0 ? m : 15;
@@ -188,7 +204,7 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
           <div className="campo">
             <span className="rot">Tipo de produto</span>
             <div className="segmented" style={{ alignSelf: "start", flexWrap: "wrap" }}>
-              {(["ssd", "ram", "pecas", "generico"] as Categoria[]).map((c) => (
+              {(["ssd", "ram", "monitor", "pecas", "generico"] as Categoria[]).map((c) => (
                 <button type="button" key={c} className={categoria === c ? "on" : ""}
                         onClick={() => { setCategoria(c); setCapacidades([]); }}>{NOME_CAT[c]}</button>
               ))}
@@ -245,6 +261,30 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
               <Switch on={externos} onClick={() => setExternos(!externos)} label="Incluir SSD externos" />
               <span className="small" style={{ fontWeight: 700 }}>Incluir SSD externos (USB)</span>
             </label>
+          </>
+        )}
+
+        {categoria === "monitor" && (
+          <>
+            <div className="campo"><span className="rot">Tamanho</span>
+              <Marcas opcoes={POLEGADAS} valor={polegadas} onChange={setPolegadas} rotulo={(x) => `${x}"`} />
+              <span className="ajuda">Cada tamanho apanha os vizinhos: 22 = 21–22,9" · 24 = 23–25,4" (inclui 23,8") · 27 = 25,5–28,9" · 32 = 29–33". Lê o tamanho também do modelo (P2419H, 27GL850…).</span></div>
+            <div className="grelha">
+              <div className="campo"><span className="rot">Resolução (vazio = todas)</span>
+                <Marcas opcoes={RESOLUCOES} valor={resolucoes} onChange={setResolucoes} /></div>
+              <div className="campo"><span className="rot">Hz mínimos</span>
+                <div className="segmented" style={{ alignSelf: "start", flexWrap: "wrap" }}>
+                  {HZ.map((h) => (
+                    <button type="button" key={h} className={hzMin === h ? "on" : ""} onClick={() => setHzMin(h)}>{h ? `${h}` : "Tanto faz"}</button>
+                  ))}
+                </div>
+                <span className="ajuda">Sem Hz no anúncio conta como 60.</span></div>
+            </div>
+            <div className="campo">
+              <label htmlFor="p-exc-m">Palavras que excluem (opcional)</label>
+              <input id="p-exc-m" className="input" value={excluir} onChange={(e) => setExcluir(e.target.value)} placeholder="Ex.: curvo, tn" />
+              <span className="ajuda">TVs, monitores de bebé, colunas de estúdio, suportes e lotes já ficam de fora.</span>
+            </div>
           </>
         )}
 

@@ -93,7 +93,7 @@ export interface FavoritoVisto {
   erro?: string;
 }
 
-export type Categoria = "ssd" | "ram" | "pecas" | "generico";
+export type Categoria = "ssd" | "ram" | "monitor" | "pecas" | "generico";
 
 export interface Procura {
   id: string;
@@ -109,6 +109,10 @@ export interface Procura {
   incluir_externos?: boolean;
   ddr?: string[];
   formatos?: string[];
+  // monitores
+  polegadas?: number[];
+  resolucoes?: string[];
+  hz_min?: number;
   // PCs às peças
   margem_minima?: number;
   // genérico
