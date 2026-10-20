@@ -93,12 +93,12 @@ img { display: block; max-width: 100%; }
   }
   .topbar h1 { font-size: 26px; }
   .bottomnav {
-    display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; inset: auto 0 0 0; z-index: 20;
+    display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; inset: auto 0 0 0; z-index: 20;
     background: var(--surface); border-top: 1px solid var(--line);
     padding: 6px max(4px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(4px, env(safe-area-inset-left, 0px));
   }
   .bottomnav button { display: grid; justify-items: center; gap: 2px; padding: 6px 0; color: var(--muted); font-size: 11px; font-weight: 700; white-space: nowrap; }
-  .bottomnav button .pill { padding: 4px 14px; border-radius: 999px; position: relative; }
+  .bottomnav button .pill { padding: 4px 12px; border-radius: 999px; position: relative; }
   .bottomnav button.active { color: var(--fg); }
   .bottomnav button.active .pill { background: var(--primary-soft); color: var(--on-primary-soft); }
   .bottomnav .dot { position: absolute; top: 0; right: 6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--primary); color: var(--on-primary); font-size: 10px; line-height: 16px; }
@@ -234,3 +234,5 @@ details.mais summary::-webkit-details-marker { display: none; }
 .passos { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--fg); }
 .passos li { padding-left: 4px; }
 code.k { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-size: 12.5px; }
+
+.btn.ghost.seguido { color: var(--on-deal); background: var(--deal); }

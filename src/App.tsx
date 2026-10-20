@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { Settings, ShoppingBag, Search, Tag } from "lucide-react";
+import { Settings, ShoppingBag, Search, Star, Tag } from "lucide-react";
 import { aPesquisar, DEMO, useDados } from "./data/store";
 import { dataHora, haQuanto } from "./data/formato";
 import { Logo } from "./ui/components";
 import NegociosEcra from "./screens/Negocios";
 import ProcurasEcra from "./screens/Procuras";
 import ComprasEcra from "./screens/Compras";
+import FavoritosEcra from "./screens/Favoritos";
 import DefinicoesEcra from "./screens/Definicoes";
 
-type Ecra = "negocios" | "procuras" | "compras" | "definicoes";
+type Ecra = "negocios" | "favoritos" | "procuras" | "compras" | "definicoes";
 const ECRAS: { id: Ecra; nome: string; Icone: typeof Tag }[] = [
   { id: "negocios", nome: "Negócios", Icone: Tag },
+  { id: "favoritos", nome: "Favoritos", Icone: Star },
   { id: "procuras", nome: "Procuras", Icone: Search },
   { id: "compras", nome: "Compras", Icone: ShoppingBag },
   { id: "definicoes", nome: "Definições", Icone: Settings },
@@ -82,6 +84,7 @@ export default function App() {
           )}
           {d.erro && <div className="banner" style={{ background: "color-mix(in srgb, var(--warn) 14%, transparent)", color: "var(--warn)" }}>{d.erro}</div>}
           {ecra === "negocios" && <NegociosEcra irPara={ir} />}
+          {ecra === "favoritos" && <FavoritosEcra />}
           {ecra === "procuras" && <ProcurasEcra />}
           {ecra === "compras" && <ComprasEcra />}
           {ecra === "definicoes" && <DefinicoesEcra />}

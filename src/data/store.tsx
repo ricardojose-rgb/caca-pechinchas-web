@@ -3,7 +3,7 @@ import {
   alterarJson, ErroGitHub, lerJson, pesquisarAgora, REPO_PADRAO, ultimaExecucao,
   type Execucao, type Ligacao,
 } from "./github";
-import type { ConfigCompras, ConfigProcuras, Negocios } from "./types";
+import type { ConfigCompras, ConfigFavoritos, ConfigProcuras, FavoritoVisto, Negocios } from "./types";
 
 declare const __DEMO__: boolean;
 export const DEMO = __DEMO__;
@@ -29,6 +29,8 @@ interface Estado {
   negocios: Negocios | null;
   procuras: ConfigProcuras | null;
   compras: ConfigCompras | null;
+  favoritos: ConfigFavoritos | null;
+  vistos: Record<string, FavoritoVisto>;
   aCarregar: boolean;
   erro: string | null;
   execucao: Execucao | null;
@@ -40,6 +42,7 @@ interface Acoes {
   recarregar(): Promise<void>;
   alterarProcuras(msg: string, f: (c: ConfigProcuras) => ConfigProcuras): Promise<boolean>;
   alterarCompras(msg: string, f: (c: ConfigCompras) => ConfigCompras): Promise<boolean>;
+  alterarFavoritos(msg: string, f: (c: ConfigFavoritos) => ConfigFavoritos): Promise<boolean>;
   pesquisar(): Promise<void>;
   avisar(texto: string): void;
 }
@@ -56,6 +59,8 @@ async function carregarDemo() {
     negocios: (await ler("negocios")) as Negocios | null,
     procuras: (await ler("procuras")) as ConfigProcuras | null,
     compras: ((await ler("compras")) ?? { compras: [] }) as ConfigCompras,
+    favoritos: ((await ler("favoritos")) ?? { favoritos: [] }) as ConfigFavoritos,
+    vistos: ((await ler("favoritos_estado")) ?? {}) as Record<string, FavoritoVisto>,
   };
 }
 
@@ -64,6 +69,8 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const [negocios, setNegocios] = useState<Negocios | null>(null);
   const [procuras, setProcuras] = useState<ConfigProcuras | null>(null);
   const [compras, setCompras] = useState<ConfigCompras | null>(null);
+  const [favoritos, setFavoritos] = useState<ConfigFavoritos | null>(null);
+  const [vistos, setVistos] = useState<Record<string, FavoritoVisto>>({});
   const [aCarregar, setACarregar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [execucao, setExecucao] = useState<Execucao | null>(null);
@@ -81,12 +88,17 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     if (DEMO) {
       const d = await carregarDemo();
       setNegocios(d.negocios); setProcuras(d.procuras); setCompras(d.compras);
+      setFavoritos(d.favoritos); setVistos(d.vistos);
       return;
     }
     if (!ligacao) return;
     setACarregar(true);
     try {
-      const [n, p, c, ex] = await Promise.all([
+      const semFicheiro = <T,>(v: T) => (e: unknown) => {
+        if (e instanceof ErroGitHub && e.status === 404) return v;
+        throw e;
+      };
+      const [n, p, c, ex, fv, vs] = await Promise.all([
         lerJson<Negocios>(ligacao, "data/negocios.json").then((r) => r.dados).catch((e) => {
           if (e instanceof ErroGitHub && e.status === 404) return null; // ainda sem pesquisas
           throw e;
@@ -94,8 +106,10 @@ export function DadosProvider({ children }: { children: ReactNode }) {
         lerJson<ConfigProcuras>(ligacao, "config/procuras.json").then((r) => r.dados),
         lerJson<ConfigCompras>(ligacao, "config/compras.json").then((r) => r.dados),
         ultimaExecucao(ligacao).catch(() => null),
+        lerJson<ConfigFavoritos>(ligacao, "config/favoritos.json").then((r) => r.dados).catch(semFicheiro({ favoritos: [] } as ConfigFavoritos)),
+        lerJson<Record<string, FavoritoVisto>>(ligacao, "data/favoritos.json").then((r) => r.dados).catch(semFicheiro({})),
       ]);
-      setNegocios(n); setProcuras(p); setCompras(c); setExecucao(ex);
+      setNegocios(n); setProcuras(p); setCompras(c); setExecucao(ex); setFavoritos(fv); setVistos(vs);
     } catch (e) {
       setErro(e instanceof Error ? e.message : String(e));
     } finally {
@@ -123,7 +137,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const ligar = useCallback((l: Ligacao | null) => {
     gravarLigacao(l);
     setLigacao(l);
-    if (!l) { setNegocios(null); setProcuras(null); setCompras(null); setExecucao(null); }
+    if (!l) { setNegocios(null); setProcuras(null); setCompras(null); setExecucao(null); setFavoritos(null); setVistos({}); }
   }, []);
 
   const alterar = useCallback(async <T,>(caminho: string, msg: string, f: (c: T) => T,
@@ -149,6 +163,9 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const alterarCompras = useCallback((msg: string, f: (c: ConfigCompras) => ConfigCompras) =>
     alterar<ConfigCompras>("config/compras.json", msg, f, compras, setCompras), [alterar, compras]);
 
+  const alterarFavoritos = useCallback((msg: string, f: (c: ConfigFavoritos) => ConfigFavoritos) =>
+    alterar<ConfigFavoritos>("config/favoritos.json", msg, f, favoritos ?? { favoritos: [] }, setFavoritos), [alterar, favoritos]);
+
   const pesquisar = useCallback(async () => {
     if (DEMO) { avisar("Pré-visualização: no site a sério, isto lança uma pesquisa nova (demora 1 a 2 minutos)."); return; }
     if (!ligacao) { avisar("Liga a tua conta do GitHub nas Definições."); return; }
@@ -162,10 +179,10 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   }, [ligacao, avisar]);
 
   const valor = useMemo(() => ({
-    ligacao, negocios, procuras, compras, aCarregar, erro, execucao, aviso,
-    ligar, recarregar, alterarProcuras, alterarCompras, pesquisar, avisar,
-  }), [ligacao, negocios, procuras, compras, aCarregar, erro, execucao, aviso,
-    ligar, recarregar, alterarProcuras, alterarCompras, pesquisar, avisar]);
+    ligacao, negocios, procuras, compras, favoritos, vistos, aCarregar, erro, execucao, aviso,
+    ligar, recarregar, alterarProcuras, alterarCompras, alterarFavoritos, pesquisar, avisar,
+  }), [ligacao, negocios, procuras, compras, favoritos, vistos, aCarregar, erro, execucao, aviso,
+    ligar, recarregar, alterarProcuras, alterarCompras, alterarFavoritos, pesquisar, avisar]);
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
 }

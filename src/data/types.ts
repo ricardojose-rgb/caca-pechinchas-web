@@ -55,9 +55,45 @@ export interface Negocios {
   estado_fontes: Record<string, EstadoFonte>;
   procuras: ResultadoProcura[];
   compras: { n: number; investido: number; vendidas: number; lucro: number };
+  favoritos?: { n: number; alertas: AlertaFavorito[] };
 }
 
-export type Categoria = "ssd" | "ram" | "generico";
+export interface AlertaFavorito {
+  tipo: "favorito_baixou" | "favorito_saiu";
+  url: string;
+  titulo: string;
+  preco?: number;
+  antes?: number;
+  estado?: string;
+  quando: string;
+}
+
+export interface Favorito {
+  url: string;
+  chave?: string;
+  titulo?: string;
+  adicionado: string;
+}
+
+export interface ConfigFavoritos {
+  favoritos: Favorito[];
+  [outro: string]: unknown;
+}
+
+export type EstadoFavorito = "disponível" | "reservado" | "vendido" | "removido" | "erro";
+
+export interface FavoritoVisto {
+  titulo?: string;
+  preco?: number | null;
+  foto?: string;
+  estado: EstadoFavorito;
+  fonte?: string;
+  verificado?: string;
+  precos?: [string, number][];
+  erro?: string;
+}
+
+export type Categoria = "ssd" | "ram" | "pecas" | "generico";
 
 export interface Procura {
   id: string;
@@ -73,6 +109,8 @@ export interface Procura {
   incluir_externos?: boolean;
   ddr?: string[];
   formatos?: string[];
+  // PCs às peças
+  margem_minima?: number;
   // genérico
   obrigatorio?: string[];
   excluir?: string[];

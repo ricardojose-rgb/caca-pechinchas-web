@@ -5,7 +5,7 @@ import { eurosCurto, listaDeTexto, slug } from "../data/formato";
 import type { Categoria, Procura } from "../data/types";
 import { BotaoApagar, Marcas, Switch, Vazio } from "../ui/components";
 
-const NOME_CAT: Record<Categoria, string> = { ssd: "SSD", ram: "Memória RAM", generico: "Outro produto" };
+const NOME_CAT: Record<Categoria, string> = { ssd: "SSD", ram: "Memória RAM", pecas: "PC às peças", generico: "Outro produto" };
 const CAP_SSD = [128, 250, 500, 1000, 2000, 4000];
 const CAP_RAM = [4, 8, 16, 32, 64];
 const capTexto = (c: number) => (c >= 1000 ? `${c / 1000} TB` : `${c} GB`);
@@ -101,6 +101,7 @@ function resumoFiltros(p: Procura): string {
   if (p.formatos?.length) partes.push(p.formatos.join("/"));
   if (p.obrigatorio?.length) partes.push(`com ${p.obrigatorio.join(" + ")}`);
   if (p.excluir?.length) partes.push(`sem ${p.excluir.join(", ")}`);
+  if (p.categoria === "pecas") partes.push(`margem mínima ${p.margem_minima ?? 15} €`);
   return partes.join(" · ");
 }
 
@@ -122,6 +123,7 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
   const [obrigatorio, setObrigatorio] = useState((inicial?.obrigatorio ?? []).join(", "));
   const [excluir, setExcluir] = useState((inicial?.excluir ?? []).join(", "));
   const [variantes, setVariantes] = useState(Object.entries(inicial?.variantes ?? {}).map(([k, v]) => `${k} = ${v}`).join("\n"));
+  const [margem, setMargem] = useState(String(inicial?.margem_minima ?? 15));
   const [erro, setErro] = useState("");
   const [aGravar, setAGravar] = useState(false);
 
@@ -140,12 +142,15 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
     // mantém campos que o site não edita (ex.: páginas, desconto_minimo)
     const p: Procura = { ...(inicial ?? {}), id, nome: nome.trim(), categoria, termos: listaTermos, preco_max: max,
       ativa: inicial?.ativa ?? true } as Procura;
-    for (const k of ["preco_min", "capacidades", "interfaces", "incluir_externos", "ddr", "formatos", "obrigatorio", "excluir", "variantes"]) delete p[k];
+    for (const k of ["preco_min", "capacidades", "interfaces", "incluir_externos", "ddr", "formatos", "obrigatorio", "excluir", "variantes", "margem_minima"]) delete p[k];
     if (min > 0) p.preco_min = min;
     if (categoria === "ssd") {
       p.capacidades = [...capacidades].sort((a, b) => a - b);
       if (interfaces.length) p.interfaces = interfaces;
       if (externos) p.incluir_externos = true;
+    } else if (categoria === "pecas") {
+      const m = Number(margem.replace(",", "."));
+      p.margem_minima = Number.isFinite(m) && m >= 0 ? m : 15;
     } else if (categoria === "ram") {
       p.capacidades = [...capacidades].sort((a, b) => a - b);
       if (ddr.length) p.ddr = ddr;
@@ -175,8 +180,8 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
           </div>
           <div className="campo">
             <span className="rot">Tipo de produto</span>
-            <div className="segmented" style={{ alignSelf: "start" }}>
-              {(["ssd", "ram", "generico"] as Categoria[]).map((c) => (
+            <div className="segmented" style={{ alignSelf: "start", flexWrap: "wrap" }}>
+              {(["ssd", "ram", "pecas", "generico"] as Categoria[]).map((c) => (
                 <button type="button" key={c} className={categoria === c ? "on" : ""}
                         onClick={() => { setCategoria(c); setCapacidades([]); }}>{NOME_CAT[c]}</button>
               ))}
@@ -215,6 +220,14 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
               <span className="small" style={{ fontWeight: 700 }}>Incluir SSD externos (USB)</span>
             </label>
           </>
+        )}
+
+        {categoria === "pecas" && (
+          <div className="campo">
+            <label htmlFor="p-margem">Margem mínima (euros)</label>
+            <input id="p-margem" className="input num" style={{ maxWidth: 200 }} inputMode="decimal" value={margem} onChange={(e) => setMargem(e.target.value)} />
+            <span className="ajuda">É negócio quando o SSD e a RAM lá dentro valem pelo menos isto mais do que o PC custa. O valor das peças vem das tuas procuras de SSD e RAM.</span>
+          </div>
         )}
 
         {categoria === "ram" && (

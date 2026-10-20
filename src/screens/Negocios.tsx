@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ExternalLink, ShoppingCart, TrendingDown } from "lucide-react";
+import { Eye, ExternalLink, ShoppingCart, Star, TrendingDown } from "lucide-react";
 import { useDados } from "../data/store";
 import { euros, eurosCurto, FONTES, haQuanto, hoje, NOME_FONTE, pais } from "../data/formato";
 import type { Negocio, ResultadoProcura } from "../data/types";
@@ -196,6 +196,18 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
     if (ok) { onComprado(); d.avisar("Registado em Compras. A procura continua aberta."); }
   };
 
+  const seguido = (d.favoritos?.favoritos ?? []).some((f) => f.url === x.url || f.chave === x.chave);
+  const alternarFavorito = async () => {
+    const ok = await d.alterarFavoritos(seguido ? "Favorito removido" : "Favorito novo", (c) => ({
+      ...c,
+      favoritos: seguido
+        ? (c.favoritos ?? []).filter((f) => f.url !== x.url && f.chave !== x.chave)
+        : [...(c.favoritos ?? []), { url: x.url, chave: x.chave, titulo: x.titulo, adicionado: hoje() }],
+    }));
+    if (ok && !seguido) d.avisar("A seguir. Avisa-te se baixar de preço ou sair.");
+  };
+  const ePecas = x.grupo === "portátil" || x.grupo === "desktop";
+  const poucoVisivel = (x.atributos?.pouco_visivel as string) || "";
   const desconto = x.referencia ? Math.round(x.desconto * 100) : null;
   return (
     <article className="card deal">
@@ -210,6 +222,7 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
           {x.nota === "em mão" && <> · entrega em mão</>}
         </div>
         <a className="titulo clamp2" href={x.url} target="_blank" rel="noreferrer">{x.titulo}</a>
+        {ePecas && x.referencia_origem && <div className="decomp">{x.referencia_origem}</div>}
         <div className="tags">
           <TagFonte fonte={x.fonte} />
           {x.resumo && <span className="tag">{x.resumo}</span>}
@@ -218,11 +231,20 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
           {(x.unidades ?? 1) > 1 && <span className="tag">{x.unidades} unidades</span>}
           {x.condicao !== "usado" && <span className="tag ok">{x.condicao === "novo" ? "Selado" : "Como novo"}</span>}
           {x.pais !== "PT" && <span className="tag">{pais(x.pais)}</span>}
+          {poucoVisivel && <span className="tag new" title={poucoVisivel}><Eye size={12} />Pouco visível</span>}
           {mostrarProcura && <span className="tag">{x.procuraNome}</span>}
         </div>
         <div className="pe">
-          <span className="ref">{x.referencia ? <>Mediana {eurosCurto(x.referencia)}{x.margem_revenda && x.margem_revenda > 0 ? <> · margem {eurosCurto(Math.round(x.margem_revenda))}</> : null}</> : "Sem mediana ainda"}</span>
+          <span className="ref" title={x.referencia_origem}>{x.referencia
+            ? (ePecas
+              ? <>Peças valem {eurosCurto(Math.round(x.referencia))}{x.margem_revenda && x.margem_revenda > 0 ? <> · margem {eurosCurto(Math.round(x.margem_revenda))}</> : null}</>
+              : <>Mediana {eurosCurto(x.referencia)}{x.margem_revenda && x.margem_revenda > 0 ? <> · margem {eurosCurto(Math.round(x.margem_revenda))}</> : null}</>)
+            : "Sem mediana ainda"}</span>
           <span className="acoes">
+            <button className={`btn ghost peq ${seguido ? "seguido" : ""}`} onClick={() => void alternarFavorito()}
+                    aria-pressed={seguido} aria-label={seguido ? "Deixar de seguir" : "Seguir anúncio"} title={seguido ? "Deixar de seguir" : "Seguir: avisa se baixar ou sair"}>
+              <Star size={15} fill={seguido ? "currentColor" : "none"} />
+            </button>
             <button className="btn ghost peq" onClick={() => setAComprar(!aComprar)}><ShoppingCart size={15} />Comprei</button>
             <a className="btn ghost peq" href={x.url} target="_blank" rel="noreferrer"><ExternalLink size={15} />Abrir</a>
           </span>
