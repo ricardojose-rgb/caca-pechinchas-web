@@ -219,7 +219,7 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
         </div>
         <div className="decomp">
           {euros(x.preco)}{x.extras > 0 && <> + {euros(x.extras)} portes e taxas</>}
-          {x.nota === "em mão" && <> · entrega em mão</>}
+          {x.nota && <> · {x.nota.startsWith("em mão") ? x.nota.replace("em mão", "entrega em mão") : x.nota}</>}
         </div>
         <a className="titulo clamp2" href={x.url} target="_blank" rel="noreferrer">{x.titulo}</a>
         {ePecas && x.referencia_origem && <div className="decomp">{x.referencia_origem}</div>}
