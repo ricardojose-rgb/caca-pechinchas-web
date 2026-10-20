@@ -3,7 +3,7 @@
   "short_name": "Pechinchas",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#F5F7F5",
-  "theme_color": "#1f6f4a",
+  "background_color": "#0E1015",
+  "theme_color": "#0E1015",
   "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
 }

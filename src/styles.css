@@ -1,52 +1,33 @@
-/* Caça-Pechinchas — mesma estrutura do Guia de Estreias (menu lateral, Manrope, cartões leves).
-   Identidade própria: verde de "negócio" como acento, âmbar para o desconto, neutros com um toque de verde. */
+/* Caça-Pechinchas — sempre em modo noite.
+   Mesmos neutros escuros do Guia de Estreias (cinzento-azulado, sem tons de verde),
+   acento índigo suave, âmbar só para o desconto. */
 :root {
-  --bg: #f5f7f5;
-  --surface: #ffffff;
-  --surface-2: #eaeeeb;
-  --surface-3: #dfe5e1;
-  --fg: #121714;
-  --muted: #5b655f;
-  --line: #e0e6e2;
-  --primary: #1f6f4a;
-  --on-primary: #ffffff;
-  --primary-soft: #d6eee0;
-  --on-primary-soft: #0b3b24;
+  --bg: #0e1015;
+  --surface: #171a21;
+  --surface-2: #1e222a;
+  --surface-3: #282d37;
+  --fg: #e8eaf0;
+  --muted: #9298a6;
+  --line: #242832;
+  --primary: #aeb7ff;
+  --on-primary: #101a70;
+  --primary-soft: #262f7a;
+  --on-primary-soft: #e2e5ff;
   --deal: #ffc94d;
   --on-deal: #2a1f00;
-  --new: #3456d6;
-  --warn: #b4235f;
-  --overlay: rgba(10, 14, 12, 0.6);
-  --shadow: 0 1px 2px rgba(16, 32, 24, 0.06), 0 8px 24px rgba(16, 32, 24, 0.06);
+  --new: #6ad1b0;
+  --warn: #ff7aae;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   --font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius: 18px;
   --radius-sm: 12px;
   /* cor de cada site (pontos pequenos, não logótipos) */
-  --s-olx: #1aa39a;
-  --s-vinted: #0a8a8f;
-  --s-wallapop: #13c1ac;
-  --s-custojusto: #e8702a;
-  --s-loja: #4353e8;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0e1311; --surface: #161d19; --surface-2: #1c2520; --surface-3: #25302a;
-    --fg: #e6ece8; --muted: #9aa7a0; --line: #25302a;
-    --primary: #6fd3a0; --on-primary: #06301c; --primary-soft: #1d4a35; --on-primary-soft: #d6eee0;
-    --deal: #ffc94d; --on-deal: #2a1f00; --new: #aab9ff; --warn: #ff7aae;
-    --overlay: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --s-olx: #3fd0c6; --s-vinted: #3fbec3; --s-wallapop: #4fe0cd; --s-custojusto: #ff9a5c; --s-loja: #aeb7ff;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0e1311; --surface: #161d19; --surface-2: #1c2520; --surface-3: #25302a;
-  --fg: #e6ece8; --muted: #9aa7a0; --line: #25302a;
-  --primary: #6fd3a0; --on-primary: #06301c; --primary-soft: #1d4a35; --on-primary-soft: #d6eee0;
-  --deal: #ffc94d; --on-deal: #2a1f00; --new: #aab9ff; --warn: #ff7aae;
-  --overlay: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --s-olx: #3fd0c6; --s-vinted: #3fbec3; --s-wallapop: #4fe0cd; --s-custojusto: #ff9a5c; --s-loja: #aeb7ff;
+  --s-olx: #3fd0c6;
+  --s-vinted: #5cc8d0;
+  --s-wallapop: #4fe0cd;
+  --s-custojusto: #ff9a5c;
+  --s-loja: #aeb7ff;
   color-scheme: dark;
 }
 

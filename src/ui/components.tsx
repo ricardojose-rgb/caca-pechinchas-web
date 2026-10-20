@@ -4,8 +4,8 @@ import { NOME_FONTE } from "../data/formato";
 export function Logo() {
   return (
     <svg viewBox="0 0 64 64" aria-hidden="true">
-      <rect width="64" height="64" rx="16" fill="var(--primary)" />
-      <path d="M18 14h14l18 18-16 16-18-18z" fill="none" stroke="var(--on-primary)" strokeWidth="5" strokeLinejoin="round" />
+      <rect width="64" height="64" rx="16" fill="var(--primary-soft)" />
+      <path d="M18 14h14l18 18-16 16-18-18z" fill="none" stroke="var(--on-primary-soft)" strokeWidth="5" strokeLinejoin="round" />
       <circle cx="26" cy="22" r="3.5" fill="var(--deal)" />
     </svg>
   );
