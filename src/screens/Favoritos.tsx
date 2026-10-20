@@ -31,7 +31,7 @@ export default function FavoritosEcra() {
     const url = link.trim();
     if (!/^https?:\/\//i.test(url)) return setErro("Cola o link completo do anúncio (começa por https://).");
     if (!SITES.test(url) && !/pcdiga|pccomponentes|worten|kuantokusta|amazon/i.test(url))
-      return setErro("Esse link não parece ser de um anúncio do OLX, Vinted, Wallapop ou CustoJusto.");
+      return setErro("Esse link não parece ser de um anúncio do OLX, Vinted ou Wallapop.");
     if (lista.some((f) => f.url === url)) return setErro("Esse anúncio já está nos favoritos.");
     setErro("");
     const ok = await d.alterarFavoritos("Favorito novo", (c) => ({

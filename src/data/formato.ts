@@ -11,7 +11,7 @@ export const NOME_FONTE: Record<string, string> = {
   olx: "OLX", vinted: "Vinted", wallapop: "Wallapop", custojusto: "CustoJusto", loja: "Loja", lojas: "Lojas",
 };
 
-export const FONTES: Fonte[] = ["olx", "vinted", "wallapop", "custojusto"];
+export const FONTES: Fonte[] = ["olx", "vinted", "wallapop"];
 
 const BANDEIRAS: Record<string, string> = { ES: "Espanha", FR: "França", IT: "Itália", DE: "Alemanha", PT: "Portugal" };
 export const pais = (c: string) => BANDEIRAS[c] ?? c;
