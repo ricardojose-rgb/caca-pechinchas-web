@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pencil, Plus } from "lucide-react";
 import { aPesquisar, useDados } from "../data/store";
 import { eurosCurto, listaDeTexto, slug } from "../data/formato";
+import { sugerirTermos } from "../data/sugestoes";
 import type { Categoria, Procura } from "../data/types";
 import { BotaoApagar, Marcas, Switch, Vazio } from "../ui/components";
 
@@ -124,6 +125,12 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
   const [excluir, setExcluir] = useState((inicial?.excluir ?? []).join(", "));
   const [variantes, setVariantes] = useState(Object.entries(inicial?.variantes ?? {}).map(([k, v]) => `${k} = ${v}`).join("\n"));
   const [margem, setMargem] = useState(String(inicial?.margem_minima ?? 15));
+  // os termos preenchem-se sozinhos até os editares à mão (numa procura existente, ficam os teus)
+  const [termosManuais, setTermosManuais] = useState(!!inicial);
+  const sugestao = useMemo(() => sugerirTermos({ nome, categoria, capacidades, interfaces, ddr, formatos }),
+    [nome, categoria, capacidades, interfaces, ddr, formatos]);
+  useEffect(() => { if (!termosManuais) setTermos(sugestao.join(", ")); }, [sugestao, termosManuais]);
+  const textoSugestao = sugestao.join(", ");
   const [erro, setErro] = useState("");
   const [aGravar, setAGravar] = useState(false);
 
@@ -191,8 +198,17 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
 
         <div className="campo">
           <label htmlFor="p-termos">O que escrever na pesquisa dos sites</label>
-          <input id="p-termos" className="input" value={termos} onChange={(e) => setTermos(e.target.value)} placeholder="Ex.: rtx 3060, geforce 3060" />
-          <span className="ajuda">Separados por vírgulas. Cada termo é pesquisado em todos os sites, por isso poucos e bons.</span>
+          <input id="p-termos" className="input" value={termos}
+                 onChange={(e) => { setTermos(e.target.value); setTermosManuais(true); }}
+                 placeholder={categoria === "generico" ? "Escreve o nome acima e eu sugiro" : "Escolhe as opções abaixo e eu sugiro"} />
+          <span className="ajuda">
+            {termosManuais ? "Editados por ti." : "Preenchido sozinho a partir do nome e das opções; podes mudar à vontade."}
+            {" "}Separados por vírgulas. Erros comuns (sdd, disco ssd…) e tamanhos parecidos entram sozinhos na pesquisa.
+            {termosManuais && textoSugestao && termos !== textoSugestao && (
+              <> <button type="button" className="btn ghost peq" style={{ padding: "2px 8px" }}
+                         onClick={() => { setTermos(textoSugestao); setTermosManuais(false); }}>Usar sugestão: {textoSugestao}</button></>
+            )}
+          </span>
         </div>
 
         <div className="grelha">
