@@ -75,8 +75,17 @@ export interface Favorito {
   adicionado: string;
 }
 
+export interface Oculto {
+  chave: string;
+  titulo?: string;
+  url?: string;
+  quando?: string;
+}
+
 export interface ConfigFavoritos {
   favoritos: Favorito[];
+  /** anúncios que excluíste: não voltam a aparecer nos negócios */
+  ocultos?: Oculto[];
   [outro: string]: unknown;
 }
 

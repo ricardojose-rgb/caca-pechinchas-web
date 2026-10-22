@@ -65,6 +65,23 @@ export default function DefinicoesEcra() {
         </form>
       )}
 
+      {(d.favoritos?.ocultos ?? []).length > 0 && (
+        <>
+          <h2 className="h2">Anúncios excluídos</h2>
+          <p className="sub" style={{ marginBottom: 10 }}>Não aparecem nos negócios, mesmo nas pesquisas seguintes.</p>
+          <div className="card lista-ocultos">
+            {[...(d.favoritos?.ocultos ?? [])].reverse().map((o) => (
+              <div key={o.chave} className="oculto">
+                <a href={o.url} target="_blank" rel="noreferrer" className="clamp2">{o.titulo || o.chave}</a>
+                <span className="small muted">{NOME_FONTE[o.chave.split(":")[0]] ?? ""}</span>
+                <button className="btn ghost peq" onClick={() => void d.alterarFavoritos(`Anúncio reposto: ${(o.titulo ?? "").slice(0, 60)}`,
+                  (c) => ({ ...c, ocultos: (c.ocultos ?? []).filter((y) => y.chave !== o.chave) }))}>Repor</button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       {n && (
         <>
           <h2 className="h2">Estado dos sites</h2>

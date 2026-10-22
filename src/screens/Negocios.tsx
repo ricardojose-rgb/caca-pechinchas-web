@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Eye, ExternalLink, ShoppingCart, Star, TrendingDown } from "lucide-react";
+import { Eye, EyeOff, ExternalLink, ShoppingCart, Star, TrendingDown } from "lucide-react";
 import { useDados } from "../data/store";
 import { euros, eurosCurto, FONTES, haQuanto, hoje, NOME_FONTE, pais } from "../data/formato";
 import type { Negocio, ResultadoProcura } from "../data/types";
@@ -32,16 +32,19 @@ export default function NegociosEcra({ irPara }: { irPara: (e: "procuras" | "def
   const setSoNovos = (v: boolean) => { setSoNovosS(v); gravarPref("soNovos", v); };
 
   const n = d.negocios;
-  const jaComprados = useMemo(() => new Set((d.compras?.compras ?? []).map((c) => c.chave).filter(Boolean) as string[]), [d.compras]);
+  const jaComprados = useMemo(() => new Set([
+    ...((d.compras?.compras ?? []).map((c) => c.chave).filter(Boolean) as string[]),
+    ...(d.favoritos?.ocultos ?? []).map((o) => o.chave),
+  ]), [d.compras, d.favoritos]);
 
   const todos: Item[] = useMemo(() => {
     if (!n) return [];
     const vistos = new Map<string, Item>();
     for (const p of n.procuras)
       for (const x of p.negocios)
-        if (!vistos.has(x.chave)) vistos.set(x.chave, { ...x, procuraId: p.id, procuraNome: p.nome });
+        if (!vistos.has(x.chave) && !jaComprados.has(x.chave)) vistos.set(x.chave, { ...x, procuraId: p.id, procuraNome: p.nome });
     return [...vistos.values()];
-  }, [n]);
+  }, [n, jaComprados]);
 
   if (d.aCarregar && !n) return <div className="center"><span className="spinner" /></div>;
   if (!n) {
@@ -144,7 +147,7 @@ export default function NegociosEcra({ irPara }: { irPara: (e: "procuras" | "def
         <details className="mais" style={{ marginTop: 22 }}>
           <summary>Outros anúncios mais baratos ({procuraSel.mais_baratos.length}), que não chegam a ser negócio</summary>
           <div className="deals" style={{ marginTop: 10 }}>
-            {procuraSel.mais_baratos.map((x) => (
+            {procuraSel.mais_baratos.filter((x) => !jaComprados.has(x.chave)).map((x) => (
               <CartaoNegocio key={x.chave} x={{ ...x, procuraId: procuraSel.id, procuraNome: procuraSel.nome }}
                              mostrarProcura={false} atualizado={n.atualizado} onComprado={() => setComprados(new Set([...comprados, x.chave]))} />
             ))}
@@ -206,6 +209,16 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
     }));
     if (ok && !seguido) d.avisar("A seguir. Avisa-te se baixar de preço ou sair.");
   };
+  const [aExcluir, setAExcluir] = useState(false);
+  const excluir = async () => {
+    if (!aExcluir) { setAExcluir(true); setTimeout(() => setAExcluir(false), 4000); return; }
+    const ok = await d.alterarFavoritos(`Anúncio excluído: ${x.titulo.slice(0, 60)}`, (c) => ({
+      ...c,
+      ocultos: [...(c.ocultos ?? []).filter((o) => o.chave !== x.chave),
+        { chave: x.chave, titulo: x.titulo, url: x.url, quando: hoje() }],
+    }));
+    if (ok) d.avisar("Anúncio excluído. Não volta a aparecer; podes repô-lo nas Definições.");
+  };
   const ePecas = x.grupo === "portátil" || x.grupo === "desktop";
   const poucoVisivel = (x.atributos?.pouco_visivel as string) || "";
   const desconto = x.referencia ? Math.round(x.desconto * 100) : null;
@@ -244,6 +257,10 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
             <button className={`btn ghost peq ${seguido ? "seguido" : ""}`} onClick={() => void alternarFavorito()}
                     aria-pressed={seguido} aria-label={seguido ? "Deixar de seguir" : "Seguir anúncio"} title={seguido ? "Deixar de seguir" : "Seguir: avisa se baixar ou sair"}>
               <Star size={15} fill={seguido ? "currentColor" : "none"} />
+            </button>
+            <button className={`btn ghost peq ${aExcluir ? "perigo" : ""}`} onClick={() => void excluir()}
+                    aria-label="Excluir anúncio" title="Excluir: não volta a aparecer">
+              <EyeOff size={15} />{aExcluir && "Excluir?"}
             </button>
             <button className="btn ghost peq" onClick={() => setAComprar(!aComprar)}><ShoppingCart size={15} />Comprei</button>
             <a className="btn ghost peq" href={x.url} target="_blank" rel="noreferrer"><ExternalLink size={15} />Abrir</a>
