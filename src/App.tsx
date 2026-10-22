@@ -102,7 +102,12 @@ export default function App() {
         ))}
       </nav>
 
-      {d.aviso && <div className="toast" role="status">{d.aviso}</div>}
+      {d.aviso && (
+        <div className="toast" role="status">
+          <span>{d.aviso}</span>
+          {d.acaoAviso && <button className="toast-acao" onClick={d.acaoAviso.fazer}>{d.acaoAviso.rotulo}</button>}
+        </div>
+      )}
     </div>
   );
 }

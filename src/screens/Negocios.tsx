@@ -35,7 +35,8 @@ export default function NegociosEcra({ irPara }: { irPara: (e: "procuras" | "def
   const jaComprados = useMemo(() => new Set([
     ...((d.compras?.compras ?? []).map((c) => c.chave).filter(Boolean) as string[]),
     ...(d.favoritos?.ocultos ?? []).map((o) => o.chave),
-  ]), [d.compras, d.favoritos]);
+    ...d.ocultosLocais,
+  ]), [d.compras, d.favoritos, d.ocultosLocais]);
 
   const todos: Item[] = useMemo(() => {
     if (!n) return [];
@@ -222,16 +223,8 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
     }));
     if (ok && !seguido) d.avisar("A seguir. Avisa-te se baixar de preço ou sair.");
   };
-  const [aExcluir, setAExcluir] = useState(false);
-  const excluir = async () => {
-    if (!aExcluir) { setAExcluir(true); setTimeout(() => setAExcluir(false), 4000); return; }
-    const ok = await d.alterarFavoritos(`Anúncio excluído: ${x.titulo.slice(0, 60)}`, (c) => ({
-      ...c,
-      ocultos: [...(c.ocultos ?? []).filter((o) => o.chave !== x.chave),
-        { chave: x.chave, titulo: x.titulo, url: x.url, quando: hoje() }],
-    }));
-    if (ok) d.avisar("Anúncio excluído. Não volta a aparecer; podes repô-lo nas Definições.");
-  };
+  const excluir = () => d.ocultar(x);
+
   const ePecas = x.grupo === "portátil" || x.grupo === "desktop";
   const poucoVisivel = (x.atributos?.pouco_visivel as string) || "";
   const desconto = x.referencia ? Math.round(x.desconto * 100) : null;
@@ -270,9 +263,9 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
                   aria-pressed={seguido} aria-label={seguido ? "Deixar de seguir" : "Seguir anúncio"} title={seguido ? "Deixar de seguir" : "Seguir: avisa se baixar ou sair"}>
             <Star size={16} fill={seguido ? "currentColor" : "none"} />
           </button>
-          <button className={`btn icone ${aExcluir ? "alerta" : ""}`} onClick={() => void excluir()}
-                  aria-label={aExcluir ? "Confirmar: excluir anúncio" : "Excluir anúncio"} title="Excluir: não volta a aparecer">
-            <EyeOff size={16} />{aExcluir && <span>Excluir?</span>}
+          <button className="btn icone" onClick={excluir}
+                  aria-label="Excluir anúncio" title="Excluir: não volta a aparecer (podes desfazer)">
+            <EyeOff size={16} />
           </button>
           <button className="btn ghost peq" onClick={() => setAComprar(!aComprar)}><ShoppingCart size={15} />Comprei</button>
           <a className="btn tonal peq" href={x.url} target="_blank" rel="noreferrer"><ExternalLink size={15} />Abrir</a>

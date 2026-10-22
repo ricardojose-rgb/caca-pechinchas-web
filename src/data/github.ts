@@ -72,7 +72,8 @@ export async function lerJson<T>(l: Ligacao, caminho: string): Promise<{ dados: 
  *  aparelho (ou a pesquisa automática) tiver gravado entretanto. */
 export async function alterarJson<T>(l: Ligacao, caminho: string, mensagemCommit: string,
                                      alterar: (atual: T) => T): Promise<{ dados: T; sha: string }> {
-  for (let tentativa = 0; tentativa < 2; tentativa++) {
+  for (let tentativa = 0; tentativa < 4; tentativa++) {
+    if (tentativa > 0) await new Promise((r) => setTimeout(r, 400 * tentativa));
     const { dados, sha } = await lerJson<T>(l, caminho);
     const novo = alterar(dados);
     try {
@@ -88,7 +89,7 @@ export async function alterarJson<T>(l: Ligacao, caminho: string, mensagemCommit
       const j = await res.json();
       return { dados: novo, sha: j.content.sha };
     } catch (e) {
-      if (e instanceof ErroGitHub && (e.status === 409 || e.status === 422) && tentativa === 0) continue;
+      if (e instanceof ErroGitHub && (e.status === 409 || e.status === 422) && tentativa < 3) continue;
       throw e;
     }
   }

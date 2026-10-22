@@ -274,3 +274,6 @@ code.k { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; fon
   .card.deal { grid-template-columns: 88px minmax(0, 1fr); column-gap: 12px; }
   .card.deal .foto { width: 88px; height: 88px; }
 }
+.toast { display: flex; align-items: center; gap: 14px; }
+.toast-acao { font-weight: 800; color: var(--on-primary); padding: 4px 8px; margin: -4px -6px -4px auto; border-radius: 8px; flex: none; }
+.toast-acao:hover { background: color-mix(in srgb, var(--primary) 14%, transparent); }

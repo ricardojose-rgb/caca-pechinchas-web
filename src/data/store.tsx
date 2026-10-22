@@ -35,6 +35,10 @@ interface Estado {
   erro: string | null;
   execucao: Execucao | null;
   aviso: string | null;
+  acaoAviso: { rotulo: string; fazer: () => void } | null;
+  /** chaves escondidas já no ecrã, antes de a gravação no GitHub terminar */
+  ocultosLocais: Set<string>;
+  ocultar(x: { chave: string; titulo: string; url: string }): void;
 }
 
 interface Acoes {
@@ -44,7 +48,7 @@ interface Acoes {
   alterarCompras(msg: string, f: (c: ConfigCompras) => ConfigCompras): Promise<boolean>;
   alterarFavoritos(msg: string, f: (c: ConfigFavoritos) => ConfigFavoritos): Promise<boolean>;
   pesquisar(): Promise<void>;
-  avisar(texto: string): void;
+  avisar(texto: string, acao?: { rotulo: string; fazer: () => void }): void;
 }
 
 const Ctx = createContext<(Estado & Acoes) | null>(null);
@@ -75,12 +79,15 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const [erro, setErro] = useState<string | null>(null);
   const [execucao, setExecucao] = useState<Execucao | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [acaoAviso, setAcaoAviso] = useState<{ rotulo: string; fazer: () => void } | null>(null);
+  const [ocultosLocais, setOcultosLocais] = useState<Set<string>>(new Set());
   const timerAviso = useRef<number>();
 
-  const avisar = useCallback((t: string) => {
+  const avisar = useCallback((t: string, acao?: { rotulo: string; fazer: () => void }) => {
     setAviso(t);
+    setAcaoAviso(acao ?? null);
     window.clearTimeout(timerAviso.current);
-    timerAviso.current = window.setTimeout(() => setAviso(null), 4500);
+    timerAviso.current = window.setTimeout(() => { setAviso(null); setAcaoAviso(null); }, acao ? 7000 : 4500);
   }, []);
 
   const recarregar = useCallback(async () => {
@@ -166,6 +173,30 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const alterarFavoritos = useCallback((msg: string, f: (c: ConfigFavoritos) => ConfigFavoritos) =>
     alterar<ConfigFavoritos>("config/favoritos.json", msg, f, favoritos ?? { favoritos: [] }, setFavoritos), [alterar, favoritos]);
 
+  // esconde logo; grava no GitHub em segundo plano (e volta a mostrar se falhar)
+  const filaOcultos = useRef<Promise<unknown>>(Promise.resolve());
+  const ocultar = useCallback((x: { chave: string; titulo: string; url: string }) => {
+    const mudar = (f: (s: Set<string>) => void) => setOcultosLocais((s) => { const n = new Set(s); f(n); return n; });
+    mudar((s) => s.add(x.chave));
+    // uma gravação de cada vez, para várias exclusões seguidas não colidirem
+    const gravar = filaOcultos.current.then(() => alterarFavoritos(`Anúncio excluído: ${x.titulo.slice(0, 60)}`, (c) => ({
+      ...c,
+      ocultos: [...(c.ocultos ?? []).filter((o) => o.chave !== x.chave),
+        { chave: x.chave, titulo: x.titulo, url: x.url, quando: new Date().toISOString().slice(0, 10) }],
+    })));
+    filaOcultos.current = gravar;
+    void gravar.then((ok) => { if (!ok) mudar((s) => s.delete(x.chave)); });
+    avisar("Anúncio excluído.", {
+      rotulo: "Desfazer",
+      fazer: () => {
+        mudar((s) => s.delete(x.chave));
+        filaOcultos.current = filaOcultos.current.then(() => alterarFavoritos(`Anúncio reposto: ${x.titulo.slice(0, 60)}`,
+          (c) => ({ ...c, ocultos: (c.ocultos ?? []).filter((o) => o.chave !== x.chave) })));
+        setAviso(null); setAcaoAviso(null);
+      },
+    });
+  }, [alterarFavoritos, avisar]);
+
   const pesquisar = useCallback(async () => {
     if (DEMO) { avisar("Pré-visualização: no site a sério, isto lança uma pesquisa nova (demora 1 a 2 minutos)."); return; }
     if (!ligacao) { avisar("Liga a tua conta do GitHub nas Definições."); return; }
@@ -179,9 +210,9 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   }, [ligacao, avisar]);
 
   const valor = useMemo(() => ({
-    ligacao, negocios, procuras, compras, favoritos, vistos, aCarregar, erro, execucao, aviso,
+    ligacao, negocios, procuras, compras, favoritos, vistos, aCarregar, erro, execucao, aviso, acaoAviso, ocultosLocais, ocultar,
     ligar, recarregar, alterarProcuras, alterarCompras, alterarFavoritos, pesquisar, avisar,
-  }), [ligacao, negocios, procuras, compras, favoritos, vistos, aCarregar, erro, execucao, aviso,
+  }), [ligacao, negocios, procuras, compras, favoritos, vistos, aCarregar, erro, execucao, aviso, acaoAviso, ocultosLocais, ocultar,
     ligar, recarregar, alterarProcuras, alterarCompras, alterarFavoritos, pesquisar, avisar]);
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
