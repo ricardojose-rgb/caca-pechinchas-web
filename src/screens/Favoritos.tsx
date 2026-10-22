@@ -129,13 +129,13 @@ function CartaoFavorito({ f, onRemover }: { f: Favorito; onRemover: () => void }
           <TagFonte fonte={fonte} />
           <EstadoTag v={v} />
         </div>
-        <div className="pe">
+      </div>
+      <div className="pe">
           <span className="ref">{v?.verificado ? `${fora ? "Saiu, visto" : "Visto"} ${haQuanto(v.verificado)}` : `Seguido desde ${f.adicionado}`}{v?.erro ? ` · ${v.erro}` : ""}</span>
           <span className="acoes">
-            {!fora && <a className="btn ghost peq" href={f.url} target="_blank" rel="noreferrer"><ExternalLink size={15} />Abrir</a>}
+            {!fora && <a className="btn tonal peq" href={f.url} target="_blank" rel="noreferrer"><ExternalLink size={15} />Abrir</a>}
             <BotaoApagar texto={fora ? "Remover" : "Deixar de seguir"} onConfirmar={onRemover} />
           </span>
-        </div>
       </div>
     </article>
   );

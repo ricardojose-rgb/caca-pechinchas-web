@@ -91,9 +91,9 @@ export default function NegociosEcra({ irPara }: { irPara: (e: "procuras" | "def
 
       <div className="resumo">
         <div className="card cel"><span className="eyebrow">Negócios agora</span><span className="v">{todos.length}</span></div>
-        <div className="card cel"><span className="eyebrow">Novos em 24 h</span><span className="v">{novos}</span></div>
+        <div className="card cel"><span className="eyebrow">Recentes (24 h)</span><span className="v">{novos}</span></div>
         <div className="card cel"><span className="eyebrow">Maior desconto</span><span className="v">{melhor ? `−${Math.round(melhor * 100)}%` : "—"}</span></div>
-        <div className="card cel"><span className="eyebrow">Anúncios analisados</span><span className="v">{lidos.toLocaleString("pt-PT")}</span></div>
+        <div className="card cel secundaria"><span className="eyebrow">Anúncios analisados</span><span className="v">{lidos.toLocaleString("pt-PT")}</span></div>
       </div>
 
       <div className="toolbar">
@@ -118,7 +118,7 @@ export default function NegociosEcra({ irPara }: { irPara: (e: "procuras" | "def
                 </button>
               );
             })}
-            <button className={`chip ${soNovos ? "on" : ""}`} aria-pressed={soNovos} onClick={() => setSoNovos(!soNovos)}>Só novos</button>
+            <button className={`chip ${soNovos ? "on" : ""}`} aria-pressed={soNovos} onClick={() => setSoNovos(!soNovos)}>Só recentes</button>
           </div>
           <div className="segmented" role="group" aria-label="Ordenar">
             {(["desconto", "preco", "recentes"] as Ordem[]).map((o) => (
@@ -176,6 +176,19 @@ function InfoProcura({ p }: { p: ResultadoProcura }) {
   );
 }
 
+/** "29 € + 5,65 € portes" · "Entrega em mão · 14 km" · "Envio de Espanha" — sem repetir o total. */
+function decomposicao(x: Negocio) {
+  const partes: string[] = [];
+  const emMao = x.nota?.startsWith("em mão");
+  if (x.extras > 0) partes.push(`${euros(x.preco)} + ${euros(x.extras)} portes e taxas`);
+  if (emMao) partes.push(x.nota.replace("em mão", "Entrega em mão"));
+  else if (x.pais !== "PT") partes.push(`envio de ${pais(x.pais)}`);
+  else if (x.nota && !/^envio de/.test(x.nota)) partes.push(x.nota);
+  if (x.motivos?.length && !(x.referencia && x.desconto > 0))
+    partes.push(x.motivos[0].startsWith("≤") ? `dentro do teu limite (${x.motivos[0]})` : x.motivos[0]);
+  return partes.join(" · ") || "Portes incluídos";
+}
+
 function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
   x: Item; mostrarProcura: boolean; atualizado: string; onComprado: () => void;
 }) {
@@ -230,42 +243,40 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
           <span className="total">{euros(x.total)}</span>
           {desconto != null && desconto > 0 && <span className="tag deal"><TrendingDown size={12} />−{desconto}%</span>}
         </div>
-        <div className="decomp">
-          {euros(x.preco)}{x.extras > 0 && <> + {euros(x.extras)} portes e taxas</>}
-          {x.nota && <> · {x.nota.startsWith("em mão") ? x.nota.replace("em mão", "entrega em mão") : x.nota}</>}
-        </div>
+        <div className="decomp">{decomposicao(x)}</div>
         <a className="titulo clamp2" href={x.url} target="_blank" rel="noreferrer">{x.titulo}</a>
         {ePecas && x.referencia_origem && <div className="decomp">{x.referencia_origem}</div>}
         <div className="tags">
           <TagFonte fonte={x.fonte} />
           {x.resumo && <span className="tag">{x.resumo}</span>}
-          {ehNovo(x, atualizado) && <span className="tag new">Novo</span>}
+          {ehNovo(x, atualizado) && <span className="tag new" title="Apareceu nas últimas 24 horas">Recente</span>}
           {x.baixou_preco && <span className="tag new">Baixou</span>}
           {(x.unidades ?? 1) > 1 && <span className="tag">{x.unidades} unidades</span>}
           {x.condicao !== "usado" && <span className="tag ok">{x.condicao === "novo" ? "Selado" : "Como novo"}</span>}
-          {x.pais !== "PT" && <span className="tag">{pais(x.pais)}</span>}
           {poucoVisivel && <span className="tag new" title={poucoVisivel}><Eye size={12} />Pouco visível</span>}
-          {mostrarProcura && <span className="tag">{x.procuraNome}</span>}
+          {mostrarProcura && <span className="tag contorno">{x.procuraNome}</span>}
         </div>
-        <div className="pe">
-          <span className="ref" title={x.referencia_origem}>{x.referencia
-            ? (ePecas
-              ? <>Peças valem {eurosCurto(Math.round(x.referencia))}{x.margem_revenda && x.margem_revenda > 0 ? <> · margem {eurosCurto(Math.round(x.margem_revenda))}</> : null}</>
-              : <>Mediana {eurosCurto(x.referencia)}{x.margem_revenda && x.margem_revenda > 0 ? <> · margem {eurosCurto(Math.round(x.margem_revenda))}</> : null}</>)
-            : "Sem mediana ainda"}</span>
-          <span className="acoes">
-            <button className={`btn ghost peq ${seguido ? "seguido" : ""}`} onClick={() => void alternarFavorito()}
-                    aria-pressed={seguido} aria-label={seguido ? "Deixar de seguir" : "Seguir anúncio"} title={seguido ? "Deixar de seguir" : "Seguir: avisa se baixar ou sair"}>
-              <Star size={15} fill={seguido ? "currentColor" : "none"} />
-            </button>
-            <button className={`btn ghost peq ${aExcluir ? "perigo" : ""}`} onClick={() => void excluir()}
-                    aria-label="Excluir anúncio" title="Excluir: não volta a aparecer">
-              <EyeOff size={15} />{aExcluir && "Excluir?"}
-            </button>
-            <button className="btn ghost peq" onClick={() => setAComprar(!aComprar)}><ShoppingCart size={15} />Comprei</button>
-            <a className="btn ghost peq" href={x.url} target="_blank" rel="noreferrer"><ExternalLink size={15} />Abrir</a>
-          </span>
-        </div>
+      </div>
+      <div className="pe">
+        <span className="ref" title={x.referencia_origem}>{x.referencia
+          ? (ePecas
+            ? <>Peças valem <b>{eurosCurto(Math.round(x.referencia))}</b></>
+            : <>Mediana <b>{eurosCurto(x.referencia)}</b></>)
+          : "Sem mediana ainda"}
+          {x.margem_revenda != null && x.margem_revenda > 0 && <> · margem <b className="margem">{eurosCurto(Math.round(x.margem_revenda))}</b></>}
+        </span>
+        <span className="acoes">
+          <button className={`btn icone ${seguido ? "seguido" : ""}`} onClick={() => void alternarFavorito()}
+                  aria-pressed={seguido} aria-label={seguido ? "Deixar de seguir" : "Seguir anúncio"} title={seguido ? "Deixar de seguir" : "Seguir: avisa se baixar ou sair"}>
+            <Star size={16} fill={seguido ? "currentColor" : "none"} />
+          </button>
+          <button className={`btn icone ${aExcluir ? "alerta" : ""}`} onClick={() => void excluir()}
+                  aria-label={aExcluir ? "Confirmar: excluir anúncio" : "Excluir anúncio"} title="Excluir: não volta a aparecer">
+            <EyeOff size={16} />{aExcluir && <span>Excluir?</span>}
+          </button>
+          <button className="btn ghost peq" onClick={() => setAComprar(!aComprar)}><ShoppingCart size={15} />Comprei</button>
+          <a className="btn tonal peq" href={x.url} target="_blank" rel="noreferrer"><ExternalLink size={15} />Abrir</a>
+        </span>
       </div>
       {aComprar && (
         <form className="comprei" onSubmit={(e) => { e.preventDefault(); void registar(); }}>
