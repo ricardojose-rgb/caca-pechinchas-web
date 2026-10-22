@@ -263,6 +263,7 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
                   aria-pressed={seguido} aria-label={seguido ? "Deixar de seguir" : "Seguir anúncio"} title={seguido ? "Deixar de seguir" : "Seguir: avisa se baixar ou sair"}>
             <Star size={16} fill={seguido ? "currentColor" : "none"} />
           </button>
+          <span className="espaco" />
           <button className="btn icone" onClick={excluir}
                   aria-label="Excluir anúncio" title="Excluir: não volta a aparecer (podes desfazer)">
             <EyeOff size={16} />
