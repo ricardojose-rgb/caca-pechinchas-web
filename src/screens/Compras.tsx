@@ -2,7 +2,7 @@ import { Fragment, useState } from "react";
 import { Check, Copy, ExternalLink, Megaphone, Plus, Trash2 } from "lucide-react";
 import { aPesquisar, DEMO, useDados } from "../data/store";
 import { euros, haQuanto, hoje, NOME_FONTE } from "../data/formato";
-import { chaveCompra, type Compra, type VendaPreparada } from "../data/types";
+import { chaveCompra, juntarCompra, type Compra, type VendaPreparada } from "../data/types";
 import { BotaoApagar, Vazio } from "../ui/components";
 
 const num = (t: string) => Number(t.replace(",", "."));
@@ -24,7 +24,8 @@ export default function ComprasEcra() {
       // localizar pela chave/título para não depender da ordem se o ficheiro mudou
       const alvo = compras[i];
       const lista = [...cfg.compras];
-      const j = lista.findIndex((c) => c.titulo === alvo.titulo && c.data === alvo.data && c.preco_pago === alvo.preco_pago);
+      const j = lista.findIndex((c) => alvo.id ? c.id === alvo.id
+        : c.titulo === alvo.titulo && c.data === alvo.data && c.preco_pago === alvo.preco_pago);
       if (j < 0) return cfg;
       const novo = f(lista[j]);
       if (novo) lista[j] = novo; else lista.splice(j, 1);
@@ -139,9 +140,8 @@ function NovaCompra({ onFeito }: { onFeito: () => void }) {
     const v = num(preco);
     if (!titulo.trim()) return setErro("Escreve o que compraste.");
     if (!Number.isFinite(v) || v <= 0) return setErro("Escreve quanto pagaste.");
-    const ok = await d.alterarCompras(`Compra: ${titulo.slice(0, 60)}`, (c) => ({
-      ...c, compras: [...(c.compras ?? []), { titulo: titulo.trim(), url: url.trim() || undefined, preco_pago: Math.round(v * 100) / 100, data: hoje(), vendido_por: null, data_venda: null }],
-    }));
+    const ok = await d.alterarCompras(`Compra: ${titulo.slice(0, 60)}`, (c) => juntarCompra(c,
+      { titulo: titulo.trim(), url: url.trim() || undefined, preco_pago: Math.round(v * 100) / 100, data: hoje(), vendido_por: null, data_venda: null }));
     if (ok) onFeito();
   };
 

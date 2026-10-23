@@ -140,6 +140,8 @@ export interface ConfigProcuras {
 }
 
 export interface Compra {
+  /** identificador próprio (duas compras nunca têm o mesmo) */
+  id?: string;
   chave?: string;
   titulo: string;
   url?: string;
@@ -171,7 +173,17 @@ export interface VendaPreparada {
 }
 
 /** Igual ao script: identifica a compra em data/vendas.json. */
-export const chaveCompra = (c: Compra) => c.chave || `${c.titulo}|${c.data}|${c.preco_pago}`;
+export const chaveCompra = (c: Compra) => c.id || c.chave || `${c.titulo}|${c.data}|${c.preco_pago}`;
+
+export const novoId = () => Math.random().toString(16).slice(2, 12).padEnd(10, "0");
+
+/** Junta uma compra nova, a não ser que o mesmo anúncio já lá esteja. */
+export function juntarCompra(cfg: ConfigCompras, nova: Compra): ConfigCompras {
+  const lista = cfg.compras ?? [];
+  if (lista.some((c) => (nova.url && c.url === nova.url) || (nova.chave && c.chave === nova.chave)))
+    throw new Error("Esta compra já está registada em Compras.");
+  return { ...cfg, compras: [...lista, { ...nova, id: nova.id ?? novoId() }] };
+}
 
 export interface ConfigCompras {
   compras: Compra[];

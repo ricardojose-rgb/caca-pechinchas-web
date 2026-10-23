@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ExternalLink, ShoppingCart, Star, TrendingDown } from "lucide-react";
 import { DEMO, useDados } from "../data/store";
 import { euros, haQuanto, hoje, NOME_FONTE } from "../data/formato";
-import type { Favorito, FavoritoVisto } from "../data/types";
+import { juntarCompra, type Favorito, type FavoritoVisto } from "../data/types";
 import { BotaoApagar, Foto, TagFonte, Vazio } from "../ui/components";
 
 const SITES = /(olx\.pt|vinted\.|wallapop\.com|custojusto\.pt)/i;
@@ -123,12 +123,9 @@ function CartaoFavorito({ f, onRemover }: { f: Favorito; onRemover: () => void }
     const valor = Number(pago.replace(",", "."));
     if (!Number.isFinite(valor) || valor <= 0) { d.avisar("Escreve quanto pagaste, com portes (ex.: 30,50)."); return; }
     setAGravar(true);
-    const ok = await d.alterarCompras(`Compra: ${titulo.slice(0, 60)}`, (c) => ({
-      ...c,
-      compras: [...(c.compras ?? []), {
-        ...(f.chave ? { chave: f.chave } : {}), titulo, url: f.url,
-        preco_pago: Math.round(valor * 100) / 100, data: hoje(), vendido_por: null, data_venda: null,
-      }],
+    const ok = await d.alterarCompras(`Compra: ${titulo.slice(0, 60)}`, (c) => juntarCompra(c, {
+      ...(f.chave ? { chave: f.chave } : {}), titulo, url: f.url,
+      preco_pago: Math.round(valor * 100) / 100, data: hoje(), vendido_por: null, data_venda: null,
     }));
     if (ok && deixar) await d.alterarFavoritos("Favorito comprado", (c) => ({ ...c, favoritos: (c.favoritos ?? []).filter((x) => x.url !== f.url) }));
     setAGravar(false);

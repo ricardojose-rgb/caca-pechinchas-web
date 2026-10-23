@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Eye, EyeOff, ExternalLink, ShoppingCart, Star, TrendingDown } from "lucide-react";
 import { useDados } from "../data/store";
 import { euros, eurosCurto, FONTES, haQuanto, hoje, NOME_FONTE, pais } from "../data/formato";
-import type { Negocio, ResultadoProcura } from "../data/types";
+import { juntarCompra, type Negocio, type ResultadoProcura } from "../data/types";
 import { Foto, PontoFonte, TagFonte, Vazio } from "../ui/components";
 
 type Ordem = "desconto" | "preco" | "recentes";
@@ -202,12 +202,9 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
     const valor = Number(pago.replace(",", "."));
     if (!Number.isFinite(valor) || valor <= 0) { d.avisar("Escreve quanto pagaste, por exemplo 30,50."); return; }
     setAGravar(true);
-    const ok = await d.alterarCompras(`Compra: ${x.titulo.slice(0, 60)}`, (c) => ({
-      ...c,
-      compras: [...(c.compras ?? []), {
-        chave: x.chave, titulo: x.titulo, url: x.url, procura: x.procuraId,
-        preco_pago: Math.round(valor * 100) / 100, data: hoje(), vendido_por: null, data_venda: null,
-      }],
+    const ok = await d.alterarCompras(`Compra: ${x.titulo.slice(0, 60)}`, (c) => juntarCompra(c, {
+      chave: x.chave, titulo: x.titulo, url: x.url, procura: x.procuraId,
+      preco_pago: Math.round(valor * 100) / 100, data: hoje(), vendido_por: null, data_venda: null,
     }));
     setAGravar(false);
     if (ok) { onComprado(); d.avisar("Registado em Compras. A procura continua aberta."); }
