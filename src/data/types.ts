@@ -158,6 +158,8 @@ export interface Compra {
 /** data/vendas.json: anúncio pronto a colar e estado dos teus anúncios de venda */
 export interface VendaPreparada {
   titulo_compra: string;
+  foto?: string;
+  fotos?: string[];
   tipo: "ssd" | "ram" | "monitor" | "pc" | "outro";
   anuncio: {
     titulo: string;

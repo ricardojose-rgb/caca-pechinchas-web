@@ -291,3 +291,19 @@ code.k { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; fon
 .precos-venda .v { font-size: 22px; font-weight: 800; }
 .meu-anuncio { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 10px; align-items: center; }
 .meu-anuncio a { font-weight: 700; }
+
+/* Compras: miniatura e galeria do anúncio original */
+.artigo { display: flex; gap: 12px; align-items: flex-start; }
+.miniatura { position: relative; width: 52px; height: 52px; flex: none; border-radius: 10px; overflow: hidden; background: var(--surface-2); padding: 0; }
+.miniatura img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.miniatura span { position: absolute; right: 3px; bottom: 3px; font-size: 10.5px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: rgba(0,0,0,.65); color: #fff; }
+.miniatura.vazia { display: block; }
+.galeria { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.92); display: grid; place-items: center; }
+.galeria > img { max-width: min(96vw, 1100px); max-height: 82vh; object-fit: contain; border-radius: 8px; }
+.galeria-topo { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: #fff; font-weight: 700; }
+.galeria-topo span { flex: 1; min-width: 0; }
+.galeria-topo .btn.icone { color: #fff; background: rgba(255,255,255,.12); }
+.galeria-seta { position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 999px; display: grid; place-items: center; color: #fff; background: rgba(255,255,255,.12); }
+.galeria-seta:hover { background: rgba(255,255,255,.22); }
+.galeria-seta.esq { left: 12px; } .galeria-seta.dir { right: 12px; }
+.galeria-conta { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); color: #fff; font-weight: 800; font-size: 13px; padding: 5px 12px; border-radius: 999px; background: rgba(0,0,0,.55); }
