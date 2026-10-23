@@ -124,7 +124,7 @@ function CartaoFavorito({ f, onRemover }: { f: Favorito; onRemover: () => void }
     if (!Number.isFinite(valor) || valor <= 0) { d.avisar("Escreve quanto pagaste, com portes (ex.: 30,50)."); return; }
     setAGravar(true);
     const ok = await d.alterarCompras(`Compra: ${titulo.slice(0, 60)}`, (c) => juntarCompra(c, {
-      ...(f.chave ? { chave: f.chave } : {}), titulo, url: f.url,
+      ...(f.chave ? { chave: f.chave } : {}), titulo, url: f.url, foto: v?.foto || f.foto || undefined,
       preco_pago: Math.round(valor * 100) / 100, data: hoje(), vendido_por: null, data_venda: null,
     }));
     if (ok && deixar) await d.alterarFavoritos("Favorito comprado", (c) => ({ ...c, favoritos: (c.favoritos ?? []).filter((x) => x.url !== f.url) }));

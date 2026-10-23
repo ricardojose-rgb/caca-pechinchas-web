@@ -203,7 +203,7 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
     if (!Number.isFinite(valor) || valor <= 0) { d.avisar("Escreve quanto pagaste, por exemplo 30,50."); return; }
     setAGravar(true);
     const ok = await d.alterarCompras(`Compra: ${x.titulo.slice(0, 60)}`, (c) => juntarCompra(c, {
-      chave: x.chave, titulo: x.titulo, url: x.url, procura: x.procuraId,
+      chave: x.chave, titulo: x.titulo, url: x.url, procura: x.procuraId, foto: x.foto || undefined,
       preco_pago: Math.round(valor * 100) / 100, data: hoje(), vendido_por: null, data_venda: null,
     }));
     setAGravar(false);
