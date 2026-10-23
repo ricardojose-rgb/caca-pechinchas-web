@@ -72,6 +72,9 @@ export interface Favorito {
   url: string;
   chave?: string;
   titulo?: string;
+  /** guardados ao seguir a partir de um negócio, para aparecerem logo */
+  foto?: string;
+  preco?: number;
   adicionado: string;
 }
 

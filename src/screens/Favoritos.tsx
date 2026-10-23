@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExternalLink, Star, TrendingDown } from "lucide-react";
+import { ExternalLink, ShoppingCart, Star, TrendingDown } from "lucide-react";
 import { DEMO, useDados } from "../data/store";
 import { euros, haQuanto, hoje, NOME_FONTE } from "../data/formato";
 import type { Favorito, FavoritoVisto } from "../data/types";
@@ -13,7 +13,7 @@ function fonteDoUrl(url: string): string {
 }
 
 function EstadoTag({ v }: { v?: FavoritoVisto }) {
-  if (!v) return <span className="tag">À espera da próxima pesquisa</span>;
+  if (!v) return <span className="tag">A ler o anúncio…</span>;
   if (v.estado === "disponível") return <span className="tag ok">Disponível</span>;
   if (v.estado === "reservado") return <span className="tag deal">Reservado</span>;
   if (v.estado === "vendido") return <span className="tag warn">Vendido</span>;
@@ -37,7 +37,12 @@ export default function FavoritosEcra() {
     const ok = await d.alterarFavoritos("Favorito novo", (c) => ({
       ...c, favoritos: [...(c.favoritos ?? []), { url, adicionado: hoje() }],
     }));
-    if (ok) { setLink(""); d.avisar("Adicionado. O preço aparece depois da próxima pesquisa."); }
+    if (ok) {
+      setLink("");
+      // leitura rápida só dos favoritos (~1 min), em vez de esperar pela próxima pesquisa
+      if (!DEMO) void d.pesquisar("favoritos");
+      d.avisar("Adicionado. A foto e o preço aparecem dentro de cerca de 1 minuto.");
+    }
   };
 
   const remover = (url: string) => d.alterarFavoritos("Favorito removido", (c) => ({
@@ -108,7 +113,27 @@ function CartaoFavorito({ f, onRemover }: { f: Favorito; onRemover: () => void }
   const fonte = v?.fonte || fonteDoUrl(f.url);
   const precos = v?.precos ?? [];
   const inicial = precos[0]?.[1];
-  const atual = v?.preco ?? null;
+  const atual = v?.preco ?? f.preco ?? null;
+  const [aComprar, setAComprar] = useState(false);
+  const [pago, setPago] = useState(atual != null ? String(atual).replace(".", ",") : "");
+  const [deixar, setDeixar] = useState(true);
+  const [aGravar, setAGravar] = useState(false);
+  const titulo = v?.titulo || f.titulo || f.url;
+  const comprei = async () => {
+    const valor = Number(pago.replace(",", "."));
+    if (!Number.isFinite(valor) || valor <= 0) { d.avisar("Escreve quanto pagaste, com portes (ex.: 30,50)."); return; }
+    setAGravar(true);
+    const ok = await d.alterarCompras(`Compra: ${titulo.slice(0, 60)}`, (c) => ({
+      ...c,
+      compras: [...(c.compras ?? []), {
+        ...(f.chave ? { chave: f.chave } : {}), titulo, url: f.url,
+        preco_pago: Math.round(valor * 100) / 100, data: hoje(), vendido_por: null, data_venda: null,
+      }],
+    }));
+    if (ok && deixar) await d.alterarFavoritos("Favorito comprado", (c) => ({ ...c, favoritos: (c.favoritos ?? []).filter((x) => x.url !== f.url) }));
+    setAGravar(false);
+    if (ok) { setAComprar(false); d.avisar("Registado em Compras. Lá tens o anúncio de venda pronto."); }
+  };
   const desceu = inicial != null && atual != null && atual < inicial ? inicial - atual : 0;
   const fora = v?.estado === "vendido" || v?.estado === "removido";
   const reservado = v?.estado === "reservado";
@@ -117,14 +142,14 @@ function CartaoFavorito({ f, onRemover }: { f: Favorito; onRemover: () => void }
       : reservado ? { texto: "RESERVADO", tom: "reservado" as const } : undefined;
   return (
     <article className={`card deal ${fora ? "saiu" : ""} ${reservado ? "reservado" : ""}`}>
-      <a href={f.url} target="_blank" rel="noreferrer" aria-label="Abrir anúncio"><Foto src={v?.foto ?? ""} fonte={fonte} faixa={faixa} /></a>
+      <a href={f.url} target="_blank" rel="noreferrer" aria-label="Abrir anúncio"><Foto src={v?.foto || f.foto || ""} fonte={fonte} faixa={faixa} /></a>
       <div className="corpo">
         <div className="preco">
           <span className="total">{atual != null ? euros(atual) : "—"}</span>
           {!fora && desceu > 0 && <span className="tag deal"><TrendingDown size={12} />−{euros(desceu)}</span>}
         </div>
         {!fora && inicial != null && desceu > 0 && <div className="decomp">Estava a {euros(inicial)}</div>}
-        <a className="titulo clamp2" href={f.url} target="_blank" rel="noreferrer">{v?.titulo || f.titulo || f.url}</a>
+        <a className="titulo clamp2" href={f.url} target="_blank" rel="noreferrer">{titulo}</a>
         <div className="tags">
           <TagFonte fonte={fonte} />
           <EstadoTag v={v} />
@@ -133,10 +158,25 @@ function CartaoFavorito({ f, onRemover }: { f: Favorito; onRemover: () => void }
       <div className="pe">
           <span className="ref">{v?.verificado ? `${fora ? "Saiu, visto" : "Visto"} ${haQuanto(v.verificado)}` : `Seguido desde ${f.adicionado}`}{v?.erro ? ` · ${v.erro}` : ""}</span>
           <span className="acoes">
+            <button className="btn ghost peq" onClick={() => setAComprar(!aComprar)}><ShoppingCart size={15} />Comprei</button>
+            <span className="espaco" />
             {!fora && <a className="btn tonal peq" href={f.url} target="_blank" rel="noreferrer"><ExternalLink size={15} />Abrir</a>}
             <BotaoApagar texto={fora ? "Remover" : "Deixar de seguir"} onConfirmar={onRemover} />
           </span>
       </div>
+      {aComprar && (
+        <form className="comprei" onSubmit={(e) => { e.preventDefault(); void comprei(); }}>
+          <label htmlFor={`fpago-${f.url}`} className="small" style={{ fontWeight: 800 }}>Paguei</label>
+          <input id={`fpago-${f.url}`} className="input peq num" inputMode="decimal" value={pago} onChange={(e) => setPago(e.target.value)} />
+          <span className="small muted">€ com portes</span>
+          <label className="small" style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+            <input type="checkbox" checked={deixar} onChange={(e) => setDeixar(e.target.checked)} />Deixar de seguir
+          </label>
+          <span style={{ flex: 1 }} />
+          <button type="button" className="btn ghost peq" onClick={() => setAComprar(false)}>Cancelar</button>
+          <button type="submit" className="btn filled peq" disabled={aGravar}>{aGravar ? "A guardar…" : "Registar compra"}</button>
+        </form>
+      )}
     </article>
   );
 }

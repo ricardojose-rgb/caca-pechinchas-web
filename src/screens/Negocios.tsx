@@ -219,7 +219,7 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
       ...c,
       favoritos: seguido
         ? (c.favoritos ?? []).filter((f) => f.url !== x.url && f.chave !== x.chave)
-        : [...(c.favoritos ?? []), { url: x.url, chave: x.chave, titulo: x.titulo, adicionado: hoje() }],
+        : [...(c.favoritos ?? []), { url: x.url, chave: x.chave, titulo: x.titulo, foto: x.foto || undefined, preco: x.preco, adicionado: hoje() }],
     }));
     if (ok && !seguido) d.avisar("A seguir. Avisa-te se baixar de preço ou sair.");
   };

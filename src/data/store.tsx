@@ -47,7 +47,7 @@ interface Acoes {
   alterarProcuras(msg: string, f: (c: ConfigProcuras) => ConfigProcuras): Promise<boolean>;
   alterarCompras(msg: string, f: (c: ConfigCompras) => ConfigCompras): Promise<boolean>;
   alterarFavoritos(msg: string, f: (c: ConfigFavoritos) => ConfigFavoritos): Promise<boolean>;
-  pesquisar(soVendas?: boolean): Promise<void>;
+  pesquisar(rapido?: boolean | "favoritos"): Promise<void>;
   vendas: Record<string, VendaPreparada>;
   avisar(texto: string, acao?: { rotulo: string; fazer: () => void }): void;
 }
@@ -201,12 +201,14 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     });
   }, [alterarFavoritos, avisar]);
 
-  const pesquisar = useCallback(async (soVendas = false) => {
+  const pesquisar = useCallback(async (rapido: boolean | "favoritos" = false) => {
+    const soVendas = !!rapido;
     if (DEMO) { avisar("Pré-visualização: no site a sério, isto lança uma pesquisa nova (demora 1 a 2 minutos)."); return; }
     if (!ligacao) { avisar("Liga a tua conta do GitHub nas Definições."); return; }
     try {
       await pesquisarAgora(ligacao, soVendas);
       setExecucao({ estado: "queued", resultado: null, quando: new Date().toISOString() });
+      if (rapido === "favoritos") return;   // quem chamou já avisou
       avisar(soVendas ? "A preparar os anúncios de venda. Demora cerca de 1 minuto; a página actualiza sozinha."
         : "Pesquisa lançada. Demora 1 a 2 minutos; a página actualiza sozinha.");
     } catch (e) {
