@@ -145,7 +145,30 @@ export interface Compra {
   data: string;
   vendido_por?: number | null;
   data_venda?: string | null;
+  /** links dos teus anúncios de venda (OLX, Vinted...) para vigiar */
+  a_venda?: string[];
 }
+
+/** data/vendas.json: anúncio pronto a colar e estado dos teus anúncios de venda */
+export interface VendaPreparada {
+  titulo_compra: string;
+  tipo: "ssd" | "ram" | "monitor" | "pc" | "outro";
+  anuncio: {
+    titulo: string;
+    descricao: string;
+    preco: { justo: number; rapido: number; pago: number; margem_justo: number; margem_rapido: number; nota: string };
+    vinted_pacote: string;
+    categoria: string;
+    estado: string;
+    fotos: string;
+  };
+  vender_em: Record<string, string>;
+  a_venda: Record<string, { estado: EstadoFavorito; preco?: number | null; titulo?: string | null; verificado?: string; fonte?: string; erro?: string }>;
+  vendido_detectado?: { url: string; preco: number | null; quando: string };
+}
+
+/** Igual ao script: identifica a compra em data/vendas.json. */
+export const chaveCompra = (c: Compra) => c.chave || `${c.titulo}|${c.data}|${c.preco_pago}`;
 
 export interface ConfigCompras {
   compras: Compra[];

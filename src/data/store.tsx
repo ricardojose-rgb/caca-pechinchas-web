@@ -3,7 +3,7 @@ import {
   alterarJson, ErroGitHub, lerJson, pesquisarAgora, REPO_PADRAO, ultimaExecucao,
   type Execucao, type Ligacao,
 } from "./github";
-import type { ConfigCompras, ConfigFavoritos, ConfigProcuras, FavoritoVisto, Negocios } from "./types";
+import type { ConfigCompras, ConfigFavoritos, ConfigProcuras, FavoritoVisto, Negocios, VendaPreparada } from "./types";
 
 declare const __DEMO__: boolean;
 export const DEMO = __DEMO__;
@@ -47,7 +47,8 @@ interface Acoes {
   alterarProcuras(msg: string, f: (c: ConfigProcuras) => ConfigProcuras): Promise<boolean>;
   alterarCompras(msg: string, f: (c: ConfigCompras) => ConfigCompras): Promise<boolean>;
   alterarFavoritos(msg: string, f: (c: ConfigFavoritos) => ConfigFavoritos): Promise<boolean>;
-  pesquisar(): Promise<void>;
+  pesquisar(soVendas?: boolean): Promise<void>;
+  vendas: Record<string, VendaPreparada>;
   avisar(texto: string, acao?: { rotulo: string; fazer: () => void }): void;
 }
 
@@ -65,6 +66,7 @@ async function carregarDemo() {
     compras: ((await ler("compras")) ?? { compras: [] }) as ConfigCompras,
     favoritos: ((await ler("favoritos")) ?? { favoritos: [] }) as ConfigFavoritos,
     vistos: ((await ler("favoritos_estado")) ?? {}) as Record<string, FavoritoVisto>,
+    vendas: ((await ler("vendas")) ?? {}) as Record<string, VendaPreparada>,
   };
 }
 
@@ -75,6 +77,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const [compras, setCompras] = useState<ConfigCompras | null>(null);
   const [favoritos, setFavoritos] = useState<ConfigFavoritos | null>(null);
   const [vistos, setVistos] = useState<Record<string, FavoritoVisto>>({});
+  const [vendas, setVendas] = useState<Record<string, VendaPreparada>>({});
   const [aCarregar, setACarregar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [execucao, setExecucao] = useState<Execucao | null>(null);
@@ -95,7 +98,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     if (DEMO) {
       const d = await carregarDemo();
       setNegocios(d.negocios); setProcuras(d.procuras); setCompras(d.compras);
-      setFavoritos(d.favoritos); setVistos(d.vistos);
+      setFavoritos(d.favoritos); setVistos(d.vistos); setVendas(d.vendas);
       return;
     }
     if (!ligacao) return;
@@ -105,7 +108,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
         if (e instanceof ErroGitHub && e.status === 404) return v;
         throw e;
       };
-      const [n, p, c, ex, fv, vs] = await Promise.all([
+      const [n, p, c, ex, fv, vs, vd] = await Promise.all([
         lerJson<Negocios>(ligacao, "data/negocios.json").then((r) => r.dados).catch((e) => {
           if (e instanceof ErroGitHub && e.status === 404) return null; // ainda sem pesquisas
           throw e;
@@ -115,8 +118,9 @@ export function DadosProvider({ children }: { children: ReactNode }) {
         ultimaExecucao(ligacao).catch(() => null),
         lerJson<ConfigFavoritos>(ligacao, "config/favoritos.json").then((r) => r.dados).catch(semFicheiro({ favoritos: [] } as ConfigFavoritos)),
         lerJson<Record<string, FavoritoVisto>>(ligacao, "data/favoritos.json").then((r) => r.dados).catch(semFicheiro({})),
+        lerJson<Record<string, VendaPreparada>>(ligacao, "data/vendas.json").then((r) => r.dados).catch(semFicheiro({})),
       ]);
-      setNegocios(n); setProcuras(p); setCompras(c); setExecucao(ex); setFavoritos(fv); setVistos(vs);
+      setNegocios(n); setProcuras(p); setCompras(c); setExecucao(ex); setFavoritos(fv); setVistos(vs); setVendas(vd);
     } catch (e) {
       setErro(e instanceof Error ? e.message : String(e));
     } finally {
@@ -197,13 +201,14 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     });
   }, [alterarFavoritos, avisar]);
 
-  const pesquisar = useCallback(async () => {
+  const pesquisar = useCallback(async (soVendas = false) => {
     if (DEMO) { avisar("Pré-visualização: no site a sério, isto lança uma pesquisa nova (demora 1 a 2 minutos)."); return; }
     if (!ligacao) { avisar("Liga a tua conta do GitHub nas Definições."); return; }
     try {
-      await pesquisarAgora(ligacao);
+      await pesquisarAgora(ligacao, soVendas);
       setExecucao({ estado: "queued", resultado: null, quando: new Date().toISOString() });
-      avisar("Pesquisa lançada. Demora 1 a 2 minutos; a página actualiza sozinha.");
+      avisar(soVendas ? "A preparar os anúncios de venda. Demora cerca de 1 minuto; a página actualiza sozinha."
+        : "Pesquisa lançada. Demora 1 a 2 minutos; a página actualiza sozinha.");
     } catch (e) {
       avisar(e instanceof Error ? e.message : String(e));
     }
@@ -211,9 +216,9 @@ export function DadosProvider({ children }: { children: ReactNode }) {
 
   const valor = useMemo(() => ({
     ligacao, negocios, procuras, compras, favoritos, vistos, aCarregar, erro, execucao, aviso, acaoAviso, ocultosLocais, ocultar,
-    ligar, recarregar, alterarProcuras, alterarCompras, alterarFavoritos, pesquisar, avisar,
+    ligar, recarregar, alterarProcuras, alterarCompras, alterarFavoritos, pesquisar, avisar, vendas,
   }), [ligacao, negocios, procuras, compras, favoritos, vistos, aCarregar, erro, execucao, aviso, acaoAviso, ocultosLocais, ocultar,
-    ligar, recarregar, alterarProcuras, alterarCompras, alterarFavoritos, pesquisar, avisar]);
+    ligar, recarregar, alterarProcuras, alterarCompras, alterarFavoritos, pesquisar, avisar, vendas]);
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
 }

@@ -96,10 +96,10 @@ export async function alterarJson<T>(l: Ligacao, caminho: string, mensagemCommit
   throw new ErroGitHub(409, mensagem(409));
 }
 
-export async function pesquisarAgora(l: Ligacao): Promise<void> {
+export async function pesquisarAgora(l: Ligacao, soVendas = false): Promise<void> {
   await gh(l, "/actions/workflows/procurar.yml/dispatches", {
     method: "POST",
-    body: JSON.stringify({ ref: "main", inputs: { diagnostico: "false" } }),
+    body: JSON.stringify({ ref: "main", inputs: { diagnostico: "false", vendas: soVendas ? "true" : "false" } }),
   });
 }
 

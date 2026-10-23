@@ -280,3 +280,14 @@ code.k { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; fon
 .toast { display: flex; align-items: center; gap: 14px; }
 .toast-acao { font-weight: 800; color: var(--on-primary); padding: 4px 8px; margin: -4px -6px -4px auto; border-radius: 8px; flex: none; }
 .toast-acao:hover { background: color-mix(in srgb, var(--primary) 14%, transparent); }
+
+/* Vender: anúncio pronto a colar */
+.linha-venda > td { background: var(--surface-2); padding: 0 !important; }
+.painel-venda { display: grid; gap: 14px; padding: 16px; max-width: 860px; }
+.painel-venda .rotulo-linha { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.painel-venda textarea.input { min-height: 220px; font-size: 14px; line-height: 1.5; }
+.precos-venda { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.precos-venda .cel { padding: 12px 14px; display: grid; gap: 2px; justify-items: start; }
+.precos-venda .v { font-size: 22px; font-weight: 800; }
+.meu-anuncio { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 10px; align-items: center; }
+.meu-anuncio a { font-weight: 700; }
