@@ -84,10 +84,13 @@ export default function ProcurasEcra() {
                     <dt>Pesquisa</dt><dd className="clamp2">{p.termos.join(", ")}</dd>
                     {resumoFiltros(p) && <><dt>Filtros</dt><dd className="clamp2">{resumoFiltros(p)}</dd></>}
                     {r && Object.keys(r.medianas).length > 0 && (
-                      <><dt>Mediana</dt><dd>{Object.entries(r.medianas).map(([g, m]) => `${g === "todos" ? "" : g + " "}${eurosCurto(m.mediana)}`).join(" · ")}</dd></>
+                      <><dt>Mediana</dt><dd className="clamp3">{Object.entries(r.medianas).map(([g, m]) => `${g === "todos" ? "" : g + " "}${eurosCurto(m.mediana)}`).join(" · ")}</dd></>
                     )}
                   </dl>
-                  <div><button className="btn ghost peq" onClick={() => setEditar(p)}><Pencil size={15} />Editar</button></div>
+                  <div className="pe">
+                    <button className="btn ghost peq" onClick={() => setEditar(p)}><Pencil size={15} />Editar</button>
+                    <BotaoApagar texto="Eliminar" onConfirmar={() => void apagar(p)} />
+                  </div>
                 </article>
               );
             })}
