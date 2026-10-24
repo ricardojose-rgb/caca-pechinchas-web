@@ -242,6 +242,7 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
           {ehNovo(x, atualizado) && <span className="tag new" title="Apareceu nas últimas 24 horas">Recente</span>}
           {x.baixou_preco && <span className="tag new">Baixou</span>}
           {(x.unidades ?? 1) > 1 && <span className="tag">{x.unidades} unidades</span>}
+          {x.lote && <span className="tag contorno" title={`Do anúncio "${x.lote.titulo}"`}>1 de {x.lote.artigos} artigos do anúncio</span>}
           {x.condicao !== "usado" && <span className="tag ok">{x.condicao === "novo" ? "Selado" : "Como novo"}</span>}
           {poucoVisivel && <span className="tag new" title={poucoVisivel}><Eye size={12} />Pouco visível</span>}
           {mostrarProcura && <span className="tag contorno">{x.procuraNome}</span>}

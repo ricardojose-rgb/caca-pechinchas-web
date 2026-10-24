@@ -29,6 +29,8 @@ export interface Negocio {
   ultimo_visto: string;
   unidades?: number;
   abaixo_do_novo: number | null;
+  /** artigo de um anúncio com vários artigos (cada um com o seu preço) */
+  lote?: { titulo: string; artigos: number; quantidade: number };
 }
 
 export interface ResultadoProcura {
