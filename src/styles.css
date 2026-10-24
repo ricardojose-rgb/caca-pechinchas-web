@@ -307,3 +307,9 @@ code.k { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; fon
 .galeria-seta:hover { background: rgba(255,255,255,.22); }
 .galeria-seta.esq { left: 12px; } .galeria-seta.dir { right: 12px; }
 .galeria-conta { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); color: #fff; font-weight: 800; font-size: 13px; padding: 5px 12px; border-radius: 999px; background: rgba(0,0,0,.55); }
+
+/* copiar o nome do artigo */
+.nome { display: flex; align-items: flex-start; gap: 4px; min-width: 0; }
+.nome > a, .nome > strong { min-width: 0; }
+.copiar-nome { flex: none; width: 26px; height: 26px; margin-top: -2px; border-radius: 8px; display: grid; place-items: center; color: var(--muted); opacity: .7; }
+.copiar-nome:hover { opacity: 1; color: var(--fg); background: var(--surface-2); }

@@ -3,7 +3,7 @@ import { Eye, EyeOff, ExternalLink, ShoppingCart, Star, TrendingDown } from "luc
 import { DEMO, useDados } from "../data/store";
 import { euros, eurosCurto, FONTES, haQuanto, hoje, NOME_FONTE, pais } from "../data/formato";
 import { juntarCompra, type Negocio, type ResultadoProcura } from "../data/types";
-import { Foto, PontoFonte, TagFonte, Vazio } from "../ui/components";
+import { Foto, PontoFonte, TagFonte, Vazio, CopiarNome } from "../ui/components";
 
 type Ordem = "desconto" | "preco" | "recentes";
 type Item = Negocio & { procuraId: string; procuraNome: string };
@@ -239,7 +239,7 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
           {desconto != null && desconto > 0 && <span className="tag deal"><TrendingDown size={12} />−{desconto}%</span>}
         </div>
         <div className="decomp">{decomposicao(x)}</div>
-        <a className="titulo clamp2" href={x.url} target="_blank" rel="noreferrer">{x.titulo}</a>
+        <div className="nome"><a className="titulo clamp2" href={x.url} target="_blank" rel="noreferrer">{x.titulo}</a><CopiarNome texto={x.titulo} /></div>
         {ePecas && x.referencia_origem && <div className="decomp">{x.referencia_origem}</div>}
         <div className="tags">
           <TagFonte fonte={x.fonte} />

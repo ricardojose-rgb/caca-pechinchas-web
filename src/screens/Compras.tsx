@@ -3,7 +3,7 @@ import { Check, ChevronLeft, ChevronRight, Copy, ExternalLink, Megaphone, Plus, 
 import { aPesquisar, DEMO, useDados } from "../data/store";
 import { euros, haQuanto, hoje, NOME_FONTE } from "../data/formato";
 import { chaveCompra, juntarCompra, type Compra, type VendaPreparada } from "../data/types";
-import { BotaoApagar, Vazio } from "../ui/components";
+import { BotaoApagar, Vazio, CopiarNome } from "../ui/components";
 
 const num = (t: string) => Number(t.replace(",", "."));
 const dataPt = (iso?: string | null) => (iso ? new Date(iso + "T12:00:00").toLocaleDateString("pt-PT", { day: "2-digit", month: "short" }) : "");
@@ -105,7 +105,10 @@ function LinhaCompra({ c, venda, aberto, onAbrir, onVender, onApagar }: {
             </button>
           : <span className="miniatura vazia" />}
         <div style={{ minWidth: 0 }}>
-        {c.url ? <a href={c.url} target="_blank" rel="noreferrer" style={{ fontWeight: 700 }}>{c.titulo}</a> : <strong>{c.titulo}</strong>}
+        <div className="nome">
+          {c.url ? <a href={c.url} target="_blank" rel="noreferrer" style={{ fontWeight: 700 }}>{c.titulo}</a> : <strong>{c.titulo}</strong>}
+          <CopiarNome texto={c.titulo} />
+        </div>
         {!vendidaJa(c) && (
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginTop: 4 }}>
             <button className={`btn ${aberto ? "tonal" : "ghost"} peq`} style={{ marginLeft: -8 }} onClick={onAbrir}>

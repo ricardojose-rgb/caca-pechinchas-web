@@ -3,7 +3,7 @@ import { ExternalLink, ShoppingCart, Star, TrendingDown } from "lucide-react";
 import { DEMO, useDados } from "../data/store";
 import { euros, haQuanto, hoje, NOME_FONTE } from "../data/formato";
 import { juntarCompra, type Favorito, type FavoritoVisto } from "../data/types";
-import { BotaoApagar, Foto, TagFonte, Vazio } from "../ui/components";
+import { BotaoApagar, Foto, TagFonte, Vazio, CopiarNome } from "../ui/components";
 
 const SITES = /(olx\.pt|vinted\.|wallapop\.com|custojusto\.pt)/i;
 
@@ -150,7 +150,7 @@ function CartaoFavorito({ f, onRemover }: { f: Favorito; onRemover: () => void }
           {!fora && desceu > 0 && <span className="tag deal"><TrendingDown size={12} />−{euros(desceu)}</span>}
         </div>
         {!fora && inicial != null && desceu > 0 && <div className="decomp">Estava a {euros(inicial)}</div>}
-        <a className="titulo clamp2" href={f.url} target="_blank" rel="noreferrer">{titulo}</a>
+        <div className="nome"><a className="titulo clamp2" href={f.url} target="_blank" rel="noreferrer">{titulo}</a><CopiarNome texto={titulo} /></div>
         <div className="tags">
           <TagFonte fonte={fonte} />
           <EstadoTag v={v} />

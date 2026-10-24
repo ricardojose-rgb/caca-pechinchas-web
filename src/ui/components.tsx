@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { Check, Copy } from "lucide-react";
 import { NOME_FONTE } from "../data/formato";
 
 export function Logo() {
@@ -73,5 +74,19 @@ export function Marcas<T extends string | number>({ opcoes, valor, onChange, rot
         );
       })}
     </div>
+  );
+}
+
+/** Ícone para copiar o nome do artigo (fica um visto durante 1,5 s). */
+export function CopiarNome({ texto }: { texto: string }) {
+  const [feito, setFeito] = useState(false);
+  return (
+    <button type="button" className="copiar-nome" title={feito ? "Copiado" : "Copiar nome"} aria-label="Copiar nome"
+            onClick={(e) => {
+              e.preventDefault(); e.stopPropagation();
+              void navigator.clipboard?.writeText(texto).then(() => { setFeito(true); setTimeout(() => setFeito(false), 1500); });
+            }}>
+      {feito ? <Check size={14} /> : <Copy size={14} />}
+    </button>
   );
 }
