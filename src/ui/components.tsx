@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { Check, ChevronLeft, ChevronRight, Copy, X } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Check, ChevronLeft, ChevronRight, Copy, X, ZoomOut } from "lucide-react";
 import { NOME_FONTE } from "../data/formato";
 
 export function Logo() {
@@ -91,11 +91,14 @@ export function CopiarNome({ texto }: { texto: string }) {
   );
 }
 
-/** Fotos do anúncio original em ecrã inteiro (setas, teclado e deslizar). */
+/** Fotos do anúncio em ecrã inteiro: setas/teclado/deslizar para mudar;
+ *  clique, roda do rato ou pinça para ampliar; com zoom, a foto acompanha o rato/dedo. */
 export function Galeria({ fotos, titulo, onFechar }: { fotos: string[]; titulo: string; onFechar: () => void }) {
   const [i, setI] = useState(0);
-  const [x0, setX0] = useState<number | null>(null);
-  const ir = (d: number) => setI((n) => (n + d + fotos.length) % fotos.length);
+  const [zoom, setZoom] = useState(1);
+  const [origem, setOrigem] = useState("50% 50%");
+  const toque = useRef<{ x: number; dist: number; zoom: number } | null>(null);
+  const ir = (d: number) => { setZoom(1); setI((n) => (n + d + fotos.length) % fotos.length); };
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {
       if (e.key === "Escape") onFechar();
@@ -105,16 +108,49 @@ export function Galeria({ fotos, titulo, onFechar }: { fotos: string[]; titulo: 
     window.addEventListener("keydown", tecla);
     return () => window.removeEventListener("keydown", tecla);
   });
+  const apontar = (el: HTMLElement, cx: number, cy: number) => {
+    const r = el.getBoundingClientRect();
+    const px = Math.min(100, Math.max(0, ((cx - r.left) / r.width) * 100));
+    const py = Math.min(100, Math.max(0, ((cy - r.top) / r.height) * 100));
+    setOrigem(`${px}% ${py}%`);
+  };
+  const dist = (t: React.TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
   return (
-    <div className="galeria" role="dialog" aria-modal="true" aria-label={`Fotos: ${titulo}`} onClick={onFechar}
-         onTouchStart={(e) => setX0(e.touches[0].clientX)}
-         onTouchEnd={(e) => { if (x0 != null) { const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) ir(dx < 0 ? 1 : -1); } setX0(null); }}>
+    <div className="galeria" role="dialog" aria-modal="true" aria-label={`Fotos: ${titulo}`} onClick={onFechar}>
       <div className="galeria-topo" onClick={(e) => e.stopPropagation()}>
         <span className="clamp1">{titulo}</span>
+        {zoom > 1 && <button className="btn icone" onClick={() => setZoom(1)} aria-label="Tirar zoom" title="Tirar zoom"><ZoomOut size={18} /></button>}
         <button className="btn icone" onClick={onFechar} aria-label="Fechar"><X size={20} /></button>
       </div>
-      <img src={fotos[i]} alt={`Foto ${i + 1} de ${fotos.length}`} referrerPolicy="no-referrer" onClick={(e) => e.stopPropagation()} />
-      {fotos.length > 1 && (
+      <div className="galeria-palco" onClick={(e) => e.stopPropagation()}>
+        <img src={fotos[i]} alt={`Foto ${i + 1} de ${fotos.length}`} referrerPolicy="no-referrer" draggable={false}
+             className={zoom > 1 ? "ampliada" : ""}
+             style={{ transform: `scale(${zoom})`, transformOrigin: origem }}
+             onClick={(e) => { apontar(e.currentTarget, e.clientX, e.clientY); setZoom(zoom > 1 ? 1 : 2.5); }}
+             onMouseMove={(e) => { if (zoom > 1) apontar(e.currentTarget, e.clientX, e.clientY); }}
+             onWheel={(e) => { apontar(e.currentTarget, e.clientX, e.clientY); setZoom((z) => Math.min(5, Math.max(1, z * (e.deltaY < 0 ? 1.2 : 1 / 1.2)))); }}
+             onTouchStart={(e) => {
+               toque.current = { x: e.touches[0].clientX, dist: e.touches.length > 1 ? dist(e.touches) : 0, zoom };
+             }}
+             onTouchMove={(e) => {
+               const t = toque.current;
+               if (!t) return;
+               if (e.touches.length > 1) {
+                 const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2, cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                 apontar(e.currentTarget, cx, cy);
+                 if (t.dist) setZoom(Math.min(5, Math.max(1, t.zoom * (dist(e.touches) / t.dist))));
+               } else if (zoom > 1) apontar(e.currentTarget, e.touches[0].clientX, e.touches[0].clientY);
+             }}
+             onTouchEnd={(e) => {
+               const t = toque.current;
+               if (t && zoom <= 1 && !t.dist && e.changedTouches.length) {
+                 const dx = e.changedTouches[0].clientX - t.x;
+                 if (Math.abs(dx) > 40) ir(dx < 0 ? 1 : -1);
+               }
+               if (e.touches.length === 0) toque.current = null;
+             }} />
+      </div>
+      {fotos.length > 1 && zoom <= 1 && (
         <>
           <button className="galeria-seta esq" onClick={(e) => { e.stopPropagation(); ir(-1); }} aria-label="Anterior"><ChevronLeft size={28} /></button>
           <button className="galeria-seta dir" onClick={(e) => { e.stopPropagation(); ir(1); }} aria-label="Seguinte"><ChevronRight size={28} /></button>
