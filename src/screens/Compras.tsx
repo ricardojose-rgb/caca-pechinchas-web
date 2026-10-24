@@ -1,9 +1,9 @@
-import { Fragment, useEffect, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Copy, ExternalLink, Megaphone, Plus, Trash2, X } from "lucide-react";
+import { Fragment, useState } from "react";
+import { Check, Copy, ExternalLink, Megaphone, Plus, Trash2 } from "lucide-react";
 import { aPesquisar, DEMO, useDados } from "../data/store";
 import { euros, haQuanto, hoje, NOME_FONTE } from "../data/formato";
 import { chaveCompra, juntarCompra, type Compra, type VendaPreparada } from "../data/types";
-import { BotaoApagar, Vazio, CopiarNome } from "../ui/components";
+import { BotaoApagar, Vazio, CopiarNome, Galeria } from "../ui/components";
 
 const num = (t: string) => Number(t.replace(",", "."));
 const dataPt = (iso?: string | null) => (iso ? new Date(iso + "T12:00:00").toLocaleDateString("pt-PT", { day: "2-digit", month: "short" }) : "");
@@ -280,36 +280,3 @@ function PainelVenda({ c, v, onVender, onLinks }: {
   );
 }
 
-/** Fotos do anúncio original em ecrã inteiro (setas, teclado e deslizar). */
-function Galeria({ fotos, titulo, onFechar }: { fotos: string[]; titulo: string; onFechar: () => void }) {
-  const [i, setI] = useState(0);
-  const [x0, setX0] = useState<number | null>(null);
-  const ir = (d: number) => setI((n) => (n + d + fotos.length) % fotos.length);
-  useEffect(() => {
-    const tecla = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onFechar();
-      if (e.key === "ArrowRight") ir(1);
-      if (e.key === "ArrowLeft") ir(-1);
-    };
-    window.addEventListener("keydown", tecla);
-    return () => window.removeEventListener("keydown", tecla);
-  });
-  return (
-    <div className="galeria" role="dialog" aria-modal="true" aria-label={`Fotos: ${titulo}`} onClick={onFechar}
-         onTouchStart={(e) => setX0(e.touches[0].clientX)}
-         onTouchEnd={(e) => { if (x0 != null) { const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) ir(dx < 0 ? 1 : -1); } setX0(null); }}>
-      <div className="galeria-topo" onClick={(e) => e.stopPropagation()}>
-        <span className="clamp1">{titulo}</span>
-        <button className="btn icone" onClick={onFechar} aria-label="Fechar"><X size={20} /></button>
-      </div>
-      <img src={fotos[i]} alt={`Foto ${i + 1} de ${fotos.length}`} referrerPolicy="no-referrer" onClick={(e) => e.stopPropagation()} />
-      {fotos.length > 1 && (
-        <>
-          <button className="galeria-seta esq" onClick={(e) => { e.stopPropagation(); ir(-1); }} aria-label="Anterior"><ChevronLeft size={28} /></button>
-          <button className="galeria-seta dir" onClick={(e) => { e.stopPropagation(); ir(1); }} aria-label="Seguinte"><ChevronRight size={28} /></button>
-          <span className="galeria-conta">{i + 1} / {fotos.length}</span>
-        </>
-      )}
-    </div>
-  );
-}

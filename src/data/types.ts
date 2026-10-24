@@ -8,6 +8,7 @@ export interface Negocio {
   titulo: string;
   url: string;
   foto: string;
+  fotos?: string[];
   local: string;
   pais: string;
   preco: number;

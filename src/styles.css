@@ -313,3 +313,6 @@ code.k { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; fon
 .nome > a, .nome > strong { min-width: 0; }
 .copiar-nome { flex: none; width: 26px; height: 26px; margin-top: -2px; border-radius: 8px; display: grid; place-items: center; color: var(--muted); opacity: .7; }
 .copiar-nome:hover { opacity: 1; color: var(--fg); background: var(--surface-2); }
+
+.foto-botao { position: relative; padding: 0; border-radius: var(--radius-sm); cursor: zoom-in; }
+.foto-botao .n-fotos { position: absolute; right: 5px; bottom: 5px; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: rgba(0,0,0,.65); color: #fff; }

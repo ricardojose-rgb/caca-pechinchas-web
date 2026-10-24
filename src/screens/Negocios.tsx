@@ -3,7 +3,7 @@ import { Eye, EyeOff, ExternalLink, ShoppingCart, Star, TrendingDown } from "luc
 import { DEMO, useDados } from "../data/store";
 import { euros, eurosCurto, FONTES, haQuanto, hoje, NOME_FONTE, pais } from "../data/formato";
 import { juntarCompra, type Negocio, type ResultadoProcura } from "../data/types";
-import { Foto, PontoFonte, TagFonte, Vazio, CopiarNome } from "../ui/components";
+import { Foto, PontoFonte, TagFonte, Vazio, CopiarNome, Galeria } from "../ui/components";
 
 type Ordem = "desconto" | "preco" | "recentes";
 type Item = Negocio & { procuraId: string; procuraNome: string };
@@ -195,6 +195,8 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
 }) {
   const d = useDados();
   const [aComprar, setAComprar] = useState(false);
+  const [galeria, setGaleria] = useState(false);
+  const fotos = x.fotos?.length ? x.fotos : x.foto ? [x.foto] : [];
   const [pago, setPago] = useState(String(x.total));
   const [aGravar, setAGravar] = useState(false);
 
@@ -232,7 +234,12 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
   const desconto = x.referencia ? Math.round(x.desconto * 100) : null;
   return (
     <article className="card deal">
-      <a href={x.url} target="_blank" rel="noreferrer" aria-label={`Abrir anúncio: ${x.titulo}`}><Foto src={x.foto} fonte={x.fonte} /></a>
+      <button type="button" className="foto-botao" onClick={() => setGaleria(true)}
+              aria-label={`Ver ${fotos.length > 1 ? `as ${fotos.length} fotos` : "a foto"}: ${x.titulo}`}>
+        <Foto src={x.foto} fonte={x.fonte} />
+        {fotos.length > 1 && <span className="n-fotos">{fotos.length}</span>}
+      </button>
+      {galeria && fotos.length > 0 && <Galeria fotos={fotos} titulo={x.titulo} onFechar={() => setGaleria(false)} />}
       <div className="corpo">
         <div className="preco">
           <span className="total">{euros(x.total)}</span>
