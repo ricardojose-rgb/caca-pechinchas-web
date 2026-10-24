@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Eye, EyeOff, ExternalLink, ShoppingCart, Star, TrendingDown } from "lucide-react";
-import { useDados } from "../data/store";
+import { DEMO, useDados } from "../data/store";
 import { euros, eurosCurto, FONTES, haQuanto, hoje, NOME_FONTE, pais } from "../data/formato";
 import { juntarCompra, type Negocio, type ResultadoProcura } from "../data/types";
 import { Foto, PontoFonte, TagFonte, Vazio } from "../ui/components";
@@ -204,10 +204,15 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
     setAGravar(true);
     const ok = await d.alterarCompras(`Compra: ${x.titulo.slice(0, 60)}`, (c) => juntarCompra(c, {
       chave: x.chave, titulo: x.titulo, url: x.url, procura: x.procuraId, foto: x.foto || undefined,
+      ...(x.referencia && !["portátil", "desktop"].includes(x.grupo) ? { mediana: x.referencia } : {}),
       preco_pago: Math.round(valor * 100) / 100, data: hoje(), vendido_por: null, data_venda: null,
     }));
     setAGravar(false);
-    if (ok) { onComprado(); d.avisar("Registado em Compras. A procura continua aberta."); }
+    if (ok) {
+      onComprado();
+      if (!DEMO) void d.pesquisar("favoritos");   // anúncio de venda pronto em ~1 min
+      d.avisar("Registado em Compras. O anúncio de venda fica pronto daqui a cerca de 1 minuto.");
+    }
   };
 
   const seguido = (d.favoritos?.favoritos ?? []).some((f) => f.url === x.url || f.chave === x.chave);

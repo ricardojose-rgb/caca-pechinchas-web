@@ -129,7 +129,11 @@ function CartaoFavorito({ f, onRemover }: { f: Favorito; onRemover: () => void }
     }));
     if (ok && deixar) await d.alterarFavoritos("Favorito comprado", (c) => ({ ...c, favoritos: (c.favoritos ?? []).filter((x) => x.url !== f.url) }));
     setAGravar(false);
-    if (ok) { setAComprar(false); d.avisar("Registado em Compras. Lá tens o anúncio de venda pronto."); }
+    if (ok) {
+      setAComprar(false);
+      if (!DEMO) void d.pesquisar("favoritos");
+      d.avisar("Registado em Compras. O anúncio de venda fica pronto daqui a cerca de 1 minuto.");
+    }
   };
   const desceu = inicial != null && atual != null && atual < inicial ? inicial - atual : 0;
   const fora = v?.estado === "vendido" || v?.estado === "removido";

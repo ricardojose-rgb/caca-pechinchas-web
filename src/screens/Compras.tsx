@@ -155,7 +155,7 @@ function NovaCompra({ onFeito }: { onFeito: () => void }) {
     if (!Number.isFinite(v) || v <= 0) return setErro("Escreve quanto pagaste.");
     const ok = await d.alterarCompras(`Compra: ${titulo.slice(0, 60)}`, (c) => juntarCompra(c,
       { titulo: titulo.trim(), url: url.trim() || undefined, preco_pago: Math.round(v * 100) / 100, data: hoje(), vendido_por: null, data_venda: null }));
-    if (ok) onFeito();
+    if (ok) { onFeito(); if (!DEMO) void d.pesquisar("favoritos"); }
   };
 
   return (

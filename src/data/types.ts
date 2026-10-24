@@ -155,6 +155,8 @@ export interface Compra {
   /** links dos teus anúncios de venda (OLX, Vinted...) para vigiar */
   a_venda?: string[];
   foto?: string;
+  /** mediana do mercado quando compraste */
+  mediana?: number;
 }
 
 /** data/vendas.json: anúncio pronto a colar e estado dos teus anúncios de venda */
