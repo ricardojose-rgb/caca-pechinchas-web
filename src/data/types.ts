@@ -124,6 +124,11 @@ export interface Procura {
   incluir_externos?: boolean;
   ddr?: string[];
   formatos?: string[];
+  // RAM
+  modulos?: "1" | "kit";
+  velocidades?: number[];
+  baixa_voltagem?: boolean;
+  formato_estrito?: boolean;
   // monitores
   polegadas?: number[];
   resolucoes?: string[];

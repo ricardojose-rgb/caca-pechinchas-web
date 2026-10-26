@@ -33,6 +33,8 @@ export interface DadosSugestao {
   polegadas?: number[];
   resolucoes?: string[];
   hzMin?: number;
+  modulos?: string;
+  baixaVoltagem?: boolean;
 }
 
 /** Termos de pesquisa sugeridos a partir do nome e das opções escolhidas. */
@@ -47,13 +49,14 @@ export function sugerirTermos(d: DadosSugestao): string[] {
   }
   if (d.categoria === "ram") {
     const t: string[] = [];
-    const geracoes = (d.ddr.length ? d.ddr : ["DDR4"]).map((x) => x.toLowerCase());
+    const geracoes = (d.ddr.length ? d.ddr : ["DDR4"]).map((x) => (x === "DDR3" && d.baixaVoltagem ? "ddr3l" : x.toLowerCase()));
     const combinacoes = d.capacidades.length * geracoes.length;
     const portatil = d.formatos.length === 1 && d.formatos[0] === "portátil";
     const pares = d.capacidades.flatMap((c) => geracoes.map((g) => [c, g] as const));
     // primeiro um termo por combinação (todas ficam cobertas), depois as outras formas de escrever
     for (const [c, g] of pares) t.push(portatil ? `sodimm ${g} ${c}gb` : `ram ${g} ${c}gb`);
-    for (const [c, g] of pares) if (c >= 8) t.push(`${g} 2x${c / 2}gb`);
+    if (d.modulos === "1") for (const [c, g] of pares) t.push(`${g} 1x${c}gb`);
+    else for (const [c, g] of pares) if (c >= 8) t.push(`${g} 2x${c / 2}gb`);
     if (combinacoes <= 2) for (const [c, g] of pares) t.push(`memoria ${g} ${c}gb`);
     return unicos(t).slice(0, Math.max(MAX_TERMOS, pares.length));
   }

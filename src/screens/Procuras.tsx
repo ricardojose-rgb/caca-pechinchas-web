@@ -9,6 +9,9 @@ import { BotaoApagar, Marcas, Switch, Vazio } from "../ui/components";
 const NOME_CAT: Record<Categoria, string> = { ssd: "SSD", ram: "Memória RAM", monitor: "Monitor", pecas: "PC às peças", generico: "Outro produto" };
 const CAP_SSD = [64, 128, 180, 250, 500, 750, 1000, 2000, 4000];
 const CAP_RAM = [4, 8, 16, 32, 64];
+const VEL_RAM: Record<string, number[]> = {
+  DDR3: [1066, 1333, 1600, 1866], DDR4: [2133, 2400, 2666, 3000, 3200, 3600], DDR5: [4800, 5200, 5600, 6000, 6400],
+};
 const POLEGADAS = [19, 22, 24, 27, 32, 34];
 const RESOLUCOES = ["1080p", "1440p", "4K"];
 const HZ = [0, 75, 120, 144, 165, 240];
@@ -106,6 +109,9 @@ function resumoFiltros(p: Procura): string {
   if (p.interfaces?.length) partes.push(p.interfaces.join("/"));
   if (p.ddr?.length) partes.push(p.ddr.join("/"));
   if (p.formatos?.length) partes.push(p.formatos.join("/"));
+  if (p.modulos) partes.push(p.modulos === "1" ? "1 módulo" : "só kits");
+  if (p.velocidades?.length) partes.push(p.velocidades.join("/") + " MHz");
+  if (p.baixa_voltagem) partes.push("DDR3L");
   if (p.polegadas?.length) partes.push(p.polegadas.map((x) => `${x}"`).join("/"));
   if (p.resolucoes?.length) partes.push(p.resolucoes.join("/"));
   if (p.hz_min) partes.push(`${p.hz_min} Hz ou mais`);
@@ -130,6 +136,10 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
   const [externos, setExternos] = useState(!!inicial?.incluir_externos);
   const [ddr, setDdr] = useState<string[]>(inicial?.ddr ?? ["DDR4"]);
   const [formatos, setFormatos] = useState<string[]>(inicial?.formatos ?? []);
+  const [modulos, setModulos] = useState<"" | "1" | "kit">(inicial?.modulos ?? "");
+  const [velocidades, setVelocidades] = useState<number[]>(inicial?.velocidades ?? []);
+  const [baixaVoltagem, setBaixaVoltagem] = useState(!!inicial?.baixa_voltagem);
+  const [formatoEstrito, setFormatoEstrito] = useState(!!inicial?.formato_estrito);
   const [obrigatorio, setObrigatorio] = useState((inicial?.obrigatorio ?? []).join(", "));
   const [excluir, setExcluir] = useState((inicial?.excluir ?? []).join(", "));
   const [variantes, setVariantes] = useState(Object.entries(inicial?.variantes ?? {}).map(([k, v]) => `${k} = ${v}`).join("\n"));
@@ -139,8 +149,8 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
   const [margem, setMargem] = useState(String(inicial?.margem_minima ?? 15));
   // os termos preenchem-se sozinhos até os editares à mão (numa procura existente, ficam os teus)
   const [termosManuais, setTermosManuais] = useState(!!inicial);
-  const sugestao = useMemo(() => sugerirTermos({ nome, categoria, capacidades, interfaces, ddr, formatos, polegadas, resolucoes, hzMin }),
-    [nome, categoria, capacidades, interfaces, ddr, formatos, polegadas, resolucoes, hzMin]);
+  const sugestao = useMemo(() => sugerirTermos({ nome, categoria, capacidades, interfaces, ddr, formatos, polegadas, resolucoes, hzMin, modulos, baixaVoltagem }),
+    [nome, categoria, capacidades, interfaces, ddr, formatos, polegadas, resolucoes, hzMin, modulos, baixaVoltagem]);
   useEffect(() => { if (!termosManuais) setTermos(sugestao.join(", ")); }, [sugestao, termosManuais]);
   const textoSugestao = sugestao.join(", ");
   const [erro, setErro] = useState("");
@@ -162,7 +172,7 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
     // mantém campos que o site não edita (ex.: páginas, desconto_minimo)
     const p: Procura = { ...(inicial ?? {}), id, nome: nome.trim(), categoria, termos: listaTermos, preco_max: max,
       ativa: inicial?.ativa ?? true } as Procura;
-    for (const k of ["preco_min", "capacidades", "interfaces", "incluir_externos", "ddr", "formatos", "obrigatorio", "excluir", "variantes", "margem_minima", "polegadas", "resolucoes", "hz_min"]) delete p[k];
+    for (const k of ["preco_min", "capacidades", "interfaces", "incluir_externos", "ddr", "formatos", "obrigatorio", "excluir", "variantes", "margem_minima", "polegadas", "resolucoes", "hz_min", "modulos", "velocidades", "baixa_voltagem", "formato_estrito"]) delete p[k];
     if (min > 0) p.preco_min = min;
     if (categoria === "ssd") {
       p.capacidades = [...capacidades].sort((a, b) => a - b);
@@ -181,6 +191,10 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
       p.capacidades = [...capacidades].sort((a, b) => a - b);
       if (ddr.length) p.ddr = ddr;
       if (formatos.length) p.formatos = formatos;
+      if (modulos) p.modulos = modulos;
+      if (velocidades.length) p.velocidades = [...velocidades].sort((a, b) => a - b);
+      if (baixaVoltagem && ddr.includes("DDR3")) p.baixa_voltagem = true;
+      if (formatoEstrito && formatos.length) p.formato_estrito = true;
     } else {
       const obr = listaDeTexto(obrigatorio);
       p.obrigatorio = obr.length ? obr : [listaTermos[0]];
@@ -310,6 +324,30 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
               <div className="campo"><span className="rot">Formato (vazio = os dois)</span>
                 <Marcas opcoes={["desktop", "portátil"]} valor={formatos} onChange={setFormatos} rotulo={(f) => (f === "desktop" ? "Desktop" : "Portátil")} /></div>
             </div>
+            <div className="grelha">
+              <div className="campo"><span className="rot">Módulos</span>
+                <div className="segmented" style={{ alignSelf: "start", flexWrap: "wrap" }}>
+                  {([["", "Tanto faz"], ["1", "Um só módulo"], ["kit", "Só kits"]] as const).map(([v, t]) => (
+                    <button type="button" key={v} className={modulos === v ? "on" : ""} onClick={() => setModulos(v)}>{t}</button>
+                  ))}
+                </div>
+                <span className="ajuda">"Um só módulo" deixa de fora kits 2×4 GB, 4+4, pares, etc.</span></div>
+              <div className="campo"><span className="rot">Velocidade (vazio = todas)</span>
+                <Marcas opcoes={[...new Set(ddr.flatMap((g) => VEL_RAM[g] ?? []))].sort((a, b) => a - b)} valor={velocidades} onChange={setVelocidades} rotulo={(v) => `${v}`} />
+                <span className="ajuda">Lida também do código: PC3-12800 = 1600 MHz. Anúncios sem velocidade entram.</span></div>
+            </div>
+            {ddr.includes("DDR3") && (
+              <label className="campo" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <Switch on={baixaVoltagem} onClick={() => setBaixaVoltagem(!baixaVoltagem)} label="Só DDR3L" />
+                <span className="small" style={{ fontWeight: 700 }}>Só DDR3L (1,35 V) — deixa de fora a DDR3 normal de 1,5 V</span>
+              </label>
+            )}
+            {formatos.length > 0 && (
+              <label className="campo" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <Switch on={formatoEstrito} onClick={() => setFormatoEstrito(!formatoEstrito)} label="Só formato confirmado" />
+                <span className="small" style={{ fontWeight: 700 }}>Deixar de fora anúncios que não dizem se é de {formatos.join(" ou ")}</span>
+              </label>
+            )}
           </>
         )}
 
