@@ -1,5 +1,5 @@
 import { Fragment, useState } from "react";
-import { Check, Copy, ExternalLink, Megaphone, Plus, Trash2 } from "lucide-react";
+import { Check, Copy, ExternalLink, Megaphone, Pencil, Plus, Trash2 } from "lucide-react";
 import { aPesquisar, DEMO, useDados } from "../data/store";
 import { euros, haQuanto, hoje, NOME_FONTE } from "../data/formato";
 import { chaveCompra, juntarCompra, type Compra, type VendaPreparada } from "../data/types";
@@ -12,6 +12,7 @@ export default function ComprasEcra() {
   const d = useDados();
   const [nova, setNova] = useState(false);
   const [aVender, setAVender] = useState<string | null>(null);
+  const [aEditar, setAEditar] = useState<string | null>(null);
   const compras = d.compras?.compras ?? [];
 
   const investido = compras.reduce((s, c) => s + (c.preco_pago || 0), 0);
@@ -67,7 +68,21 @@ export default function ComprasEcra() {
                       <LinhaCompra c={c} venda={v} aberto={aVender === k}
                                    onAbrir={() => setAVender(aVender === k ? null : k)}
                                    onVender={vender}
-                                   onApagar={() => atualizar(i, () => null, `Compra apagada: ${c.titulo.slice(0, 50)}`)} />
+                                   onApagar={() => atualizar(i, () => null, `Compra apagada: ${c.titulo.slice(0, 50)}`)}
+                                   onEditar={() => setAEditar(aEditar === k ? null : k)} />
+                      {aEditar === k && (
+                        <tr className="linha-venda"><td colSpan={6}>
+                          <EditarCompra c={c} onFechar={() => setAEditar(null)}
+                                        onGuardar={async (nova) => {
+                                          const ok = await atualizar(i, (x) => ({ ...x, ...nova }), `Compra alterada: ${nova.titulo.slice(0, 50)}`);
+                                          if (ok) {
+                                            setAEditar(null);
+                                            if (!DEMO && nova.vendido_por == null) void d.pesquisar("favoritos");
+                                            d.avisar("Compra alterada.");
+                                          }
+                                        }} />
+                        </td></tr>
+                      )}
                       {aVender === k && c.vendido_por == null && (
                         <tr className="linha-venda"><td colSpan={6}>
                           <PainelVenda c={c} v={v} onVender={vender}
@@ -85,9 +100,9 @@ export default function ComprasEcra() {
   );
 }
 
-function LinhaCompra({ c, venda, aberto, onAbrir, onVender, onApagar }: {
+function LinhaCompra({ c, venda, aberto, onAbrir, onVender, onApagar, onEditar }: {
   c: Compra; venda?: VendaPreparada; aberto: boolean; onAbrir: () => void;
-  onVender: (v: number | null) => void; onApagar: () => void;
+  onVender: (v: number | null) => void; onApagar: () => void; onEditar: () => void;
 }) {
   const [valor, setValor] = useState("");
   const [galeria, setGaleria] = useState(false);
@@ -140,7 +155,10 @@ function LinhaCompra({ c, venda, aberto, onAbrir, onVender, onApagar }: {
       <td className={`dir ${l == null ? "muted" : l >= 0 ? "lucro" : "prejuizo"}`} style={{ whiteSpace: "nowrap" }}>
         {l == null ? "—" : `${l >= 0 ? "+" : ""}${euros(l)}`}
       </td>
-      <td className="dir"><BotaoApagar onConfirmar={onApagar} /></td>
+      <td className="dir" style={{ whiteSpace: "nowrap" }}>
+        <button className="btn icone" onClick={onEditar} aria-label="Editar compra" title="Editar compra"><Pencil size={15} /></button>
+        <BotaoApagar onConfirmar={onApagar} />
+      </td>
     </tr>
   );
 }
@@ -280,3 +298,55 @@ function PainelVenda({ c, v, onVender, onLinks }: {
   );
 }
 
+
+function EditarCompra({ c, onFechar, onGuardar }: { c: Compra; onFechar: () => void; onGuardar: (n: Partial<Compra> & { titulo: string }) => Promise<void> }) {
+  const [titulo, setTitulo] = useState(c.titulo);
+  const [pago, setPago] = useState(String(c.preco_pago).replace(".", ","));
+  const [data, setData] = useState((c.data || "").slice(0, 10));
+  const [url, setUrl] = useState(c.url ?? "");
+  const [vendido, setVendido] = useState(c.vendido_por != null ? String(c.vendido_por).replace(".", ",") : "");
+  const [dataVenda, setDataVenda] = useState((c.data_venda || "").slice(0, 10));
+  const [erro, setErro] = useState("");
+  const [aGravar, setAGravar] = useState(false);
+  const vendida = c.vendido_por != null;
+  const guardar = async () => {
+    const p = num(pago), v = num(vendido);
+    if (!titulo.trim()) return setErro("Escreve o nome do artigo.");
+    if (!Number.isFinite(p) || p <= 0) return setErro("Escreve quanto pagaste.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return setErro("Escolhe a data da compra.");
+    if (vendida && (!Number.isFinite(v) || v < 0)) return setErro("Escreve por quanto vendeste.");
+    setErro(""); setAGravar(true);
+    await onGuardar({
+      titulo: titulo.trim(), preco_pago: Math.round(p * 100) / 100, data, url: url.trim() || undefined,
+      ...(vendida ? { vendido_por: Math.round(v * 100) / 100, data_venda: dataVenda || hoje() } : {}),
+    });
+    setAGravar(false);
+  };
+  return (
+    <form className="painel-venda form" style={{ padding: 16 }} onSubmit={(e) => { e.preventDefault(); void guardar(); }}>
+      <div className="campo"><label htmlFor={`e-t-${c.titulo}`}>Artigo</label>
+        <input id={`e-t-${c.titulo}`} className="input" value={titulo} onChange={(e) => setTitulo(e.target.value)} /></div>
+      <div className="grelha">
+        <div className="campo"><label htmlFor={`e-p-${c.titulo}`}>Paguei (com portes)</label>
+          <input id={`e-p-${c.titulo}`} className="input num" inputMode="decimal" value={pago} onChange={(e) => setPago(e.target.value)} /></div>
+        <div className="campo"><label htmlFor={`e-d-${c.titulo}`}>Data da compra</label>
+          <input id={`e-d-${c.titulo}`} className="input" type="date" value={data} onChange={(e) => setData(e.target.value)} /></div>
+      </div>
+      <div className="campo"><label htmlFor={`e-u-${c.titulo}`}>Link do anúncio (opcional)</label>
+        <input id={`e-u-${c.titulo}`} className="input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" /></div>
+      {vendida && (
+        <div className="grelha">
+          <div className="campo"><label htmlFor={`e-v-${c.titulo}`}>Vendi por</label>
+            <input id={`e-v-${c.titulo}`} className="input num" inputMode="decimal" value={vendido} onChange={(e) => setVendido(e.target.value)} /></div>
+          <div className="campo"><label htmlFor={`e-dv-${c.titulo}`}>Data da venda</label>
+            <input id={`e-dv-${c.titulo}`} className="input" type="date" value={dataVenda} onChange={(e) => setDataVenda(e.target.value)} /></div>
+        </div>
+      )}
+      {erro && <div className="tag warn" style={{ justifySelf: "start", fontSize: 13, padding: "6px 12px" }}>{erro}</div>}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button type="submit" className="btn filled" disabled={aGravar}>{aGravar ? "A guardar…" : "Guardar"}</button>
+        <button type="button" className="btn ghost" onClick={onFechar}>Cancelar</button>
+      </div>
+    </form>
+  );
+}
