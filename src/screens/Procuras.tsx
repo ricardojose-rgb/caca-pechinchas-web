@@ -163,7 +163,7 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
     if (!nome.trim()) return setErro("Dá um nome à procura.");
     if (listaTermos.length === 0) return setErro("Escreve pelo menos um termo de pesquisa.");
     if (!Number.isFinite(max) || max <= 0) return setErro("Escreve o preço máximo que pagavas.");
-    if ((categoria === "ssd" || categoria === "ram") && capacidades.length === 0) return setErro("Escolhe pelo menos uma capacidade.");
+    if (categoria === "ram" && capacidades.length === 0) return setErro("Escolhe pelo menos uma capacidade.");
     if (categoria === "monitor" && polegadas.length === 0) return setErro("Escolhe pelo menos um tamanho.");
 
     let id = inicial?.id ?? slug(nome);
@@ -271,6 +271,7 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
           <>
             <div className="campo"><span className="rot">Capacidade</span>
               <Marcas opcoes={CAP_SSD} valor={capacidades} onChange={setCapacidades} rotulo={capTexto} />
+              <span className="ajuda">Nenhuma marcada = todos os tamanhos. Cada tamanho é comparado com a mediana do seu tamanho.</span>
               <span className="ajuda">Tamanhos parecidos contam juntos: 120/128 GB · 230–256 GB · 450–512 GB · 750/800 GB · 960 GB–1 TB · 1,92–2 TB. A pesquisa inclui-os sozinha.</span></div>
             <div className="campo"><span className="rot">Tipo (vazio = todos)</span>
               <Marcas opcoes={["SATA", "NVMe", "M.2 SATA"]} valor={interfaces} onChange={setInterfaces} /></div>

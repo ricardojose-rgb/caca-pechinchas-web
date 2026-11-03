@@ -40,10 +40,15 @@ export interface DadosSugestao {
 /** Termos de pesquisa sugeridos a partir do nome e das opções escolhidas. */
 export function sugerirTermos(d: DadosSugestao): string[] {
   if (d.categoria === "ssd") {
+    // sem tamanho escolhido = todos os tamanhos: termos largos (o script junta os de cada tamanho, a rodar)
+    if (!d.capacidades.length) return ["ssd", "disco ssd", "nvme", "ssd m.2", "disco solido", "sdd", "disco duro ssd", "disque ssd"];
     const t: string[] = [];
     for (const c of d.capacidades) {
-      for (const tam of TAMANHOS_IRMAOS[c] ?? [`${c}gb`]) t.push(`ssd ${tam}`);
-      if (d.interfaces.includes("NVMe")) t.push(`nvme ${(TAMANHOS_IRMAOS[c] ?? [`${c}gb`]).slice(-1)[0]}`);
+      const tam = TAMANHOS_IRMAOS[c] ?? [`${c}gb`];
+      const txt = tam[tam.length - 1];
+      t.push(`ssd ${txt}`, `${txt} ssd`, `disco ssd ${txt}`);
+      for (const x of tam.slice(0, -1)) t.push(`ssd ${x}`);
+      if (!d.interfaces.length || d.interfaces.includes("NVMe")) t.push(`nvme ${txt}`);
     }
     return unicos(t).slice(0, MAX_TERMOS);
   }
