@@ -15,10 +15,16 @@ export default function ComprasEcra() {
   const [aEditar, setAEditar] = useState<string | null>(null);
   const compras = d.compras?.compras ?? [];
 
+  const [aba, setAba] = useState<"stock" | "vendidas" | "todas">("stock");
+
   const investido = compras.reduce((s, c) => s + (c.preco_pago || 0), 0);
   const vendidas = compras.filter((c) => c.vendido_por != null);
+  const porVender = compras.filter((c) => c.vendido_por == null);
+  const recebido = vendidas.reduce((s, c) => s + (c.vendido_por ?? 0), 0);
   const lucro = vendidas.reduce((s, c) => s + ((c.vendido_por ?? 0) - c.preco_pago), 0);
-  const emStock = compras.length - vendidas.length;
+  const parado = porVender.reduce((s, c) => s + (c.preco_pago || 0), 0);
+  const estimado = porVender.reduce((s, c) => s + (valorEstimado(c, d.vendas[chaveCompra(c)]) ?? c.preco_pago), 0);
+  const visiveis = aba === "stock" ? porVender : aba === "vendidas" ? vendidas : compras;
 
   const atualizar = (i: number, f: (c: Compra) => Compra | null, msg: string) =>
     d.alterarCompras(msg, (cfg) => {
@@ -41,31 +47,40 @@ export default function ComprasEcra() {
       </div>
       <p className="sub">Regista aqui o que compras e por quanto vendes. Os artigos comprados deixam de aparecer nos negócios.</p>
 
-      <div className="resumo">
-        <div className="card cel"><span className="eyebrow">Por vender</span><span className="v">{emStock}</span></div>
-        <div className="card cel"><span className="eyebrow">Investido</span><span className="v">{euros(investido)}</span></div>
-        <div className="card cel"><span className="eyebrow">Vendidas</span><span className="v">{vendidas.length}</span></div>
-        <div className="card cel"><span className="eyebrow">Lucro realizado</span>
-          <span className={`v ${lucro >= 0 ? "lucro" : "prejuizo"}`}>{lucro >= 0 ? "+" : ""}{euros(lucro)}</span></div>
-      </div>
+      {compras.length > 0 && (
+        <Balanco investido={investido} recebido={recebido} lucro={lucro} parado={parado} estimado={estimado}
+                 nStock={porVender.length} nVendidas={vendidas.length} />
+      )}
+
+      {compras.length > 0 && (
+        <div className="segmented abas-compras" role="tablist" aria-label="Mostrar">
+          {([["stock", `Por vender · ${porVender.length}`], ["vendidas", `Vendidas · ${vendidas.length}`], ["todas", `Todas · ${compras.length}`]] as const).map(([k, t]) => (
+            <button key={k} role="tab" aria-selected={aba === k} className={aba === k ? "on" : ""} onClick={() => setAba(k)}>{t}</button>
+          ))}
+        </div>
+      )}
 
       {nova && <NovaCompra onFeito={() => setNova(false)} />}
 
       {compras.length === 0
         ? <Vazio titulo="Ainda sem compras"><p>Em cada negócio há um botão Comprei. Também podes adicionar uma compra à mão.</p></Vazio>
+        : visiveis.length === 0
+        ? <Vazio titulo={aba === "stock" ? "Vendeste tudo" : "Ainda não vendeste nada"}><p>{aba === "stock" ? "Não tens artigos por vender." : "Quando vendes um artigo, regista o valor e ele passa para aqui."}</p></Vazio>
         : (
           <div className="card tabela-wrap">
             <table className="t">
-              <thead><tr><th>Artigo</th><th>Data</th><th className="dir">Pago</th><th>Venda</th><th className="dir">Lucro</th><th /></tr></thead>
+              <thead><tr><th>Artigo</th><th>Comprado</th><th className="dir">Pago</th>
+                <th>{aba === "stock" ? "Vale ~ / Vender" : "Vendido por"}</th>
+                <th className="dir">{aba === "stock" ? "Margem prevista" : "Lucro"}</th><th /></tr></thead>
               <tbody>
-                {[...compras.entries()].reverse().map(([i, c]) => {
+                {[...compras.entries()].reverse().filter(([, c]) => visiveis.includes(c)).map(([i, c]) => {
                   const k = chaveCompra(c);
                   const vender = (v: number | null) => atualizar(i, (x) => ({ ...x, vendido_por: v, data_venda: v == null ? null : hoje() }),
                     v == null ? `Venda anulada: ${c.titulo.slice(0, 50)}` : `Vendido: ${c.titulo.slice(0, 50)}`);
                   const v = d.vendas[k];
                   return (
                     <Fragment key={`${k}-${i}`}>
-                      <LinhaCompra c={c} venda={v} aberto={aVender === k}
+                      <LinhaCompra c={c} venda={v} aberto={aVender === k} estimado={valorEstimado(c, v)}
                                    onAbrir={() => setAVender(aVender === k ? null : k)}
                                    onVender={vender}
                                    onApagar={() => atualizar(i, () => null, `Compra apagada: ${c.titulo.slice(0, 50)}`)}
@@ -100,8 +115,58 @@ export default function ComprasEcra() {
   );
 }
 
-function LinhaCompra({ c, venda, aberto, onAbrir, onVender, onApagar, onEditar }: {
-  c: Compra; venda?: VendaPreparada; aberto: boolean; onAbrir: () => void;
+/** Quanto o artigo deve valer: o preço justo do anúncio preparado, ou a mediana quando compraste. */
+function valorEstimado(c: Compra, v?: VendaPreparada): number | null {
+  return v?.anuncio?.preco?.justo ?? c.mediana ?? null;
+}
+
+const dias = (de?: string | null, ate?: string | null) => {
+  if (!de) return null;
+  const n = Math.round((new Date((ate || hoje()) + "T12:00:00").getTime() - new Date(de + "T12:00:00").getTime()) / 86400000);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+};
+const textoDias = (n: number | null) => (n == null ? "" : n === 0 ? "hoje" : n === 1 ? "1 dia" : `${n} dias`);
+
+function Balanco({ investido, recebido, lucro, parado, estimado, nStock, nVendidas }: {
+  investido: number; recebido: number; lucro: number; parado: number; estimado: number; nStock: number; nVendidas: number;
+}) {
+  const saldo = recebido - investido;
+  const pct = investido > 0 ? Math.min(100, Math.round((recebido / investido) * 100)) : 0;
+  const potencial = saldo + estimado;
+  return (
+    <div className="card balanco">
+      <div className="balanco-topo">
+        <div>
+          <span className="eyebrow">Balanço total</span>
+          {saldo >= 0
+            ? <p className="balanco-frase"><span className="lucro">Já estás em lucro: +{euros(saldo)}</span></p>
+            : <p className="balanco-frase">Faltam <strong className="prejuizo">{euros(-saldo)}</strong> em vendas para recuperares o que investiste.</p>}
+        </div>
+        <span className="balanco-pct">{pct}%</span>
+      </div>
+      <div className="barra" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Investimento recuperado">
+        <span style={{ width: `${pct}%` }} />
+      </div>
+      <div className="balanco-numeros">
+        <div><span className="eyebrow">Investido</span><span className="v">{euros(investido)}</span><span className="small muted">em {nStock + nVendidas} compras</span></div>
+        <div><span className="eyebrow">Recebido</span><span className="v">{euros(recebido)}</span><span className="small muted">{nVendidas} {nVendidas === 1 ? "venda" : "vendas"}</span></div>
+        <div><span className="eyebrow">Lucro das vendas</span>
+          <span className={`v ${lucro >= 0 ? "lucro" : "prejuizo"}`}>{lucro >= 0 ? "+" : ""}{euros(lucro)}</span>
+          <span className="small muted">vendido − pago</span></div>
+        <div><span className="eyebrow">Em stock</span><span className="v">{euros(parado)}</span>
+          <span className="small muted">{nStock} por vender · valem ~{euros(estimado)}</span></div>
+      </div>
+      {nStock > 0 && (
+        <p className="small muted balanco-nota">
+          Se venderes o que tens ao preço justo, ficas com {potencial >= 0 ? <span className="lucro">+{euros(potencial)}</span> : <span className="prejuizo">{euros(potencial)}</span>} no total.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function LinhaCompra({ c, venda, aberto, estimado, onAbrir, onVender, onApagar, onEditar }: {
+  c: Compra; venda?: VendaPreparada; aberto: boolean; estimado: number | null; onAbrir: () => void;
   onVender: (v: number | null) => void; onApagar: () => void; onEditar: () => void;
 }) {
   const [valor, setValor] = useState("");
@@ -139,22 +204,36 @@ function LinhaCompra({ c, venda, aberto, onAbrir, onVender, onApagar, onEditar }
        </div>
        {galeria && <Galeria fotos={fotos} titulo={c.titulo} onFechar={() => setGaleria(false)} />}
       </td>
-      <td className="muted" style={{ whiteSpace: "nowrap" }}>{dataPt(c.data)}</td>
+      <td className="muted" style={{ whiteSpace: "nowrap" }}>
+        {dataPt(c.data)}
+        <div className="small">{vendida ? `vendido em ${textoDias(dias(c.data, c.data_venda))}` : `há ${textoDias(dias(c.data))}`}</div>
+      </td>
       <td className="dir" style={{ whiteSpace: "nowrap" }}>{euros(c.preco_pago)}</td>
       <td style={{ whiteSpace: "nowrap" }}>
         {vendida
           ? <span>{euros(c.vendido_por)} <span className="muted small">{dataPt(c.data_venda)}</span> <button className="btn ghost peq" onClick={() => onVender(null)}>Anular</button></span>
           : (
+            <div style={{ display: "grid", gap: 4 }}>
+            {estimado != null && <span className="small muted">vale ~{euros(estimado)}</span>}
             <form style={{ display: "flex", gap: 6, alignItems: "center" }}
                   onSubmit={(e) => { e.preventDefault(); const v = num(valor); if (Number.isFinite(v) && v > 0) onVender(Math.round(v * 100) / 100); }}>
               <input aria-label="Vendido por" className="input peq num" inputMode="decimal" placeholder="Vendi por" value={valor} onChange={(e) => setValor(e.target.value)} />
               <button type="submit" className="btn ghost peq" disabled={!valor}>Vendido</button>
             </form>
+            </div>
           )}
       </td>
-      <td className={`dir ${l == null ? "muted" : l >= 0 ? "lucro" : "prejuizo"}`} style={{ whiteSpace: "nowrap" }}>
-        {l == null ? "—" : `${l >= 0 ? "+" : ""}${euros(l)}`}
-      </td>
+      {l != null ? (
+        <td className={`dir ${l >= 0 ? "lucro" : "prejuizo"}`} style={{ whiteSpace: "nowrap" }}>
+          {`${l >= 0 ? "+" : ""}${euros(l)}`}
+          {c.preco_pago > 0 && <div className="small">{l >= 0 ? "+" : ""}{Math.round((l / c.preco_pago) * 100)}%</div>}
+        </td>
+      ) : (
+        <td className="dir muted" style={{ whiteSpace: "nowrap" }}>
+          {estimado != null ? `${estimado - c.preco_pago >= 0 ? "+" : ""}${euros(estimado - c.preco_pago)}` : "—"}
+          {estimado != null && <div className="small">previsto</div>}
+        </td>
+      )}
       <td className="dir" style={{ whiteSpace: "nowrap" }}>
         <button className="btn icone" onClick={onEditar} aria-label="Editar compra" title="Editar compra"><Pencil size={15} /></button>
         <BotaoApagar onConfirmar={onApagar} />

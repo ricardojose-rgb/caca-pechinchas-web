@@ -318,3 +318,21 @@ code.k { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; fon
 
 .foto-botao { position: relative; padding: 0; border-radius: var(--radius-sm); cursor: zoom-in; }
 .foto-botao .n-fotos { position: absolute; right: 5px; bottom: 5px; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: rgba(0,0,0,.65); color: #fff; }
+
+/* Compras: balanço e abas */
+.balanco { padding: 16px 18px; display: grid; gap: 12px; margin-bottom: 16px; }
+.balanco-topo { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.balanco-frase { margin: 4px 0 0; font-size: 17px; font-weight: 600; }
+.balanco-pct { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--primary); }
+.barra { height: 10px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.barra span { display: block; height: 100%; border-radius: 999px; background: var(--primary); transition: width .3s; }
+.balanco-numeros { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.balanco-numeros > div { display: grid; gap: 1px; min-width: 0; }
+.balanco-numeros .v { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.balanco-nota { margin: 0; }
+.abas-compras { margin-bottom: 12px; flex-wrap: wrap; }
+@media (max-width: 720px) {
+  .balanco-numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .balanco-frase { font-size: 15px; }
+  .balanco-pct { font-size: 22px; }
+}
