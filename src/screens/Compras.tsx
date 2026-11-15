@@ -25,6 +25,10 @@ export default function ComprasEcra() {
   const parado = porVender.reduce((s, c) => s + (c.preco_pago || 0), 0);
   const estimado = porVender.reduce((s, c) => s + (valorEstimado(c, d.vendas[chaveCompra(c)]) ?? c.preco_pago), 0);
   const visiveis = aba === "stock" ? porVender : aba === "vendidas" ? vendidas : compras;
+  // previsto (mediana quando compraste − pago) contra o que realmente ganhaste
+  const comPrevisao = vendidas.filter((c) => c.mediana != null);
+  const previsto = comPrevisao.reduce((s, c) => s + ((c.mediana ?? 0) - c.preco_pago), 0);
+  const realizado = comPrevisao.reduce((s, c) => s + ((c.vendido_por ?? 0) - c.preco_pago), 0);
 
   const atualizar = (i: number, f: (c: Compra) => Compra | null, msg: string) =>
     d.alterarCompras(msg, (cfg) => {
@@ -49,7 +53,8 @@ export default function ComprasEcra() {
 
       {compras.length > 0 && (
         <Balanco investido={investido} recebido={recebido} lucro={lucro} parado={parado} estimado={estimado}
-                 nStock={porVender.length} nVendidas={vendidas.length} />
+                 nStock={porVender.length} nVendidas={vendidas.length}
+                 previsao={comPrevisao.length ? { n: comPrevisao.length, previsto, realizado } : null} />
       )}
 
       {compras.length > 0 && (
@@ -127,8 +132,9 @@ const dias = (de?: string | null, ate?: string | null) => {
 };
 const textoDias = (n: number | null) => (n == null ? "" : n === 0 ? "hoje" : n === 1 ? "1 dia" : `${n} dias`);
 
-function Balanco({ investido, recebido, lucro, parado, estimado, nStock, nVendidas }: {
+function Balanco({ investido, recebido, lucro, parado, estimado, nStock, nVendidas, previsao }: {
   investido: number; recebido: number; lucro: number; parado: number; estimado: number; nStock: number; nVendidas: number;
+  previsao: { n: number; previsto: number; realizado: number } | null;
 }) {
   const saldo = recebido - investido;
   const pct = investido > 0 ? Math.min(100, Math.round((recebido / investido) * 100)) : 0;
@@ -156,6 +162,13 @@ function Balanco({ investido, recebido, lucro, parado, estimado, nStock, nVendid
         <div><span className="eyebrow">Em stock</span><span className="v">{euros(parado)}</span>
           <span className="small muted">{nStock} por vender · valem ~{euros(estimado)}</span></div>
       </div>
+      {previsao && (
+        <p className="small muted balanco-nota">
+          Previsto contra realizado ({previsao.n} {previsao.n === 1 ? "venda" : "vendas"}): contavas ganhar {sinal(previsao.previsto)} e ganhaste{" "}
+          <span className={previsao.realizado >= previsao.previsto ? "lucro" : "prejuizo"}>{sinal(previsao.realizado)}</span>
+          {previsao.realizado >= previsao.previsto ? " — vendes acima da mediana." : " — vendes abaixo da mediana; talvez valha a pena esperar mais ou pedir mais."}
+        </p>
+      )}
       {nStock > 0 && (
         <p className="small muted balanco-nota">
           Se venderes o que tens ao preço justo, ficas com {potencial >= 0 ? <span className="lucro">+{euros(potencial)}</span> : <span className="prejuizo">{euros(potencial)}</span>} no total.
@@ -164,6 +177,8 @@ function Balanco({ investido, recebido, lucro, parado, estimado, nStock, nVendid
     </div>
   );
 }
+
+const sinal = (v: number) => `${v >= 0 ? "+" : "−"}${euros(Math.abs(v))}`;
 
 function LinhaCompra({ c, venda, aberto, estimado, onAbrir, onVender, onApagar, onEditar }: {
   c: Compra; venda?: VendaPreparada; aberto: boolean; estimado: number | null; onAbrir: () => void;
@@ -227,6 +242,7 @@ function LinhaCompra({ c, venda, aberto, estimado, onAbrir, onVender, onApagar, 
         <td className={`dir ${l >= 0 ? "lucro" : "prejuizo"}`} style={{ whiteSpace: "nowrap" }}>
           {`${l >= 0 ? "+" : ""}${euros(l)}`}
           {c.preco_pago > 0 && <div className="small">{l >= 0 ? "+" : ""}{Math.round((l / c.preco_pago) * 100)}%</div>}
+          {c.mediana != null && <div className="small muted" title="Mediana do mercado quando compraste − o que pagaste">previsto {sinal(c.mediana - c.preco_pago)}</div>}
         </td>
       ) : (
         <td className="dir muted" style={{ whiteSpace: "nowrap" }}>

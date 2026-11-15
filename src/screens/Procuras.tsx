@@ -3,10 +3,17 @@ import { Pencil, Plus } from "lucide-react";
 import { aPesquisar, useDados } from "../data/store";
 import { eurosCurto, listaDeTexto, slug } from "../data/formato";
 import { MAX_TERMOS, sugerirTermos } from "../data/sugestoes";
-import type { Categoria, Procura } from "../data/types";
+import { TIPOS_TABELA, type CatalogoTipo, type Categoria, type Procura } from "../data/types";
 import { BotaoApagar, Marcas, Switch, Vazio } from "../ui/components";
 
-const NOME_CAT: Record<Categoria, string> = { ssd: "SSD", ram: "Memória RAM", monitor: "Monitor", pecas: "PC às peças", generico: "Outro produto" };
+const NOME_CAT: Record<Categoria, string> = {
+  ssd: "SSD", ram: "Memória RAM", monitor: "Monitor", grafica: "Placa gráfica", processador: "Processador",
+  minipc: "Mini PC", portatil: "Portátil", telemovel: "Telemóvel", tablet: "Tablet", consola: "Consola",
+  audio: "Auscultadores e relógios", pecas: "PC às peças", generico: "Outro produto",
+};
+const ORDEM_CAT: Categoria[] = ["ssd", "ram", "grafica", "processador", "monitor", "minipc", "portatil", "telemovel",
+  "tablet", "consola", "audio", "pecas", "generico"];
+const ehTabela = (c: Categoria) => TIPOS_TABELA.includes(c);
 const CAP_SSD = [64, 128, 180, 250, 500, 750, 1000, 2000, 4000];
 const CAP_RAM = [4, 8, 16, 32, 64];
 const VEL_RAM: Record<string, number[]> = {
@@ -117,6 +124,10 @@ function resumoFiltros(p: Procura): string {
   if (p.hz_min) partes.push(`${p.hz_min} Hz ou mais`);
   if (p.obrigatorio?.length) partes.push(`com ${p.obrigatorio.join(" + ")}`);
   if (p.excluir?.length) partes.push(`sem ${p.excluir.join(", ")}`);
+  if (p.modelos?.length) partes.push(p.modelos.length > 4 ? `${p.modelos.slice(0, 4).join(", ")} e mais ${p.modelos.length - 4}` : p.modelos.join(", "));
+  else if (ehTabela(p.categoria)) partes.push("todos os modelos");
+  if (p.ram_min) partes.push(`${p.ram_min} GB de RAM ou mais`);
+  if (p.lucro_minimo) partes.push(`lucro ≥ ${p.lucro_minimo} €`);
   if (p.categoria === "pecas") partes.push(`margem mínima ${p.margem_minima ?? 15} €`);
   return partes.join(" · ");
 }
@@ -147,22 +158,27 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
   const [resolucoes, setResolucoes] = useState<string[]>(inicial?.resolucoes ?? []);
   const [hzMin, setHzMin] = useState<number>(inicial?.hz_min ?? 0);
   const [margem, setMargem] = useState(String(inicial?.margem_minima ?? 15));
+  const [modelos, setModelos] = useState<string[]>(inicial?.modelos ?? []);
+  const [filtroModelos, setFiltroModelos] = useState("");
+  const [ramMin, setRamMin] = useState<number>(inicial?.ram_min ?? 0);
+  const [lucroMin, setLucroMin] = useState(inicial?.lucro_minimo != null ? String(inicial.lucro_minimo) : "");
+  const catalogo = useDados().negocios?.catalogo?.[categoria] as CatalogoTipo | undefined;
   // os termos preenchem-se sozinhos até os editares à mão (numa procura existente, ficam os teus)
   const [termosManuais, setTermosManuais] = useState(!!inicial);
-  const sugestao = useMemo(() => sugerirTermos({ nome, categoria, capacidades, interfaces, ddr, formatos, polegadas, resolucoes, hzMin, modulos, baixaVoltagem }),
-    [nome, categoria, capacidades, interfaces, ddr, formatos, polegadas, resolucoes, hzMin, modulos, baixaVoltagem]);
+  const sugestao = useMemo(() => sugerirTermos({ nome, categoria, capacidades, interfaces, ddr, formatos, polegadas, resolucoes, hzMin, modulos, baixaVoltagem, modelos }),
+    [nome, categoria, capacidades, interfaces, ddr, formatos, polegadas, resolucoes, hzMin, modulos, baixaVoltagem, modelos]);
   useEffect(() => { if (!termosManuais) setTermos(sugestao.join(", ")); }, [sugestao, termosManuais]);
   const textoSugestao = sugestao.join(", ");
   const [erro, setErro] = useState("");
   const [aGravar, setAGravar] = useState(false);
 
   const submeter = async () => {
-    const max = Number(precoMax.replace(",", "."));
+    const max = precoMax.trim() ? Number(precoMax.replace(",", ".")) : ehTabela(categoria) ? 0 : NaN;
     const min = precoMin ? Number(precoMin.replace(",", ".")) : 0;
     const listaTermos = listaDeTexto(termos);
     if (!nome.trim()) return setErro("Dá um nome à procura.");
-    if (listaTermos.length === 0) return setErro("Escreve pelo menos um termo de pesquisa.");
-    if (!Number.isFinite(max) || max <= 0) return setErro("Escreve o preço máximo que pagavas.");
+    if (listaTermos.length === 0 && !ehTabela(categoria)) return setErro("Escreve pelo menos um termo de pesquisa.");
+    if (!Number.isFinite(max) || (max <= 0 && !ehTabela(categoria))) return setErro("Escreve o preço máximo que pagavas.");
     if (categoria === "ram" && capacidades.length === 0) return setErro("Escolhe pelo menos uma capacidade.");
     if (categoria === "monitor" && polegadas.length === 0) return setErro("Escolhe pelo menos um tamanho.");
 
@@ -172,7 +188,9 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
     // mantém campos que o site não edita (ex.: páginas, desconto_minimo)
     const p: Procura = { ...(inicial ?? {}), id, nome: nome.trim(), categoria, termos: listaTermos, preco_max: max,
       ativa: inicial?.ativa ?? true } as Procura;
-    for (const k of ["preco_min", "capacidades", "interfaces", "incluir_externos", "ddr", "formatos", "obrigatorio", "excluir", "variantes", "margem_minima", "polegadas", "resolucoes", "hz_min", "modulos", "velocidades", "baixa_voltagem", "formato_estrito"]) delete p[k];
+    for (const k of ["preco_min", "capacidades", "interfaces", "incluir_externos", "ddr", "formatos", "obrigatorio", "excluir", "variantes", "margem_minima", "polegadas", "resolucoes", "hz_min", "modulos", "velocidades", "baixa_voltagem", "formato_estrito", "modelos", "ram_min", "lucro_minimo"]) delete p[k];
+    const lucro = lucroMin.trim() ? Number(lucroMin.replace(",", ".")) : NaN;
+    if (Number.isFinite(lucro) && lucro >= 0) p.lucro_minimo = lucro;
     if (min > 0) p.preco_min = min;
     if (categoria === "ssd") {
       p.capacidades = [...capacidades].sort((a, b) => a - b);
@@ -182,6 +200,12 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
       p.polegadas = [...polegadas].sort((a, b) => a - b);
       if (resolucoes.length) p.resolucoes = resolucoes;
       if (hzMin > 0) p.hz_min = hzMin;
+      const exc = listaDeTexto(excluir);
+      if (exc.length) p.excluir = exc;
+    } else if (ehTabela(categoria)) {
+      if (modelos.length) p.modelos = modelos;
+      if (capacidades.length) p.capacidades = [...capacidades].sort((a, b) => a - b);
+      if (ramMin > 0) p.ram_min = ramMin;
       const exc = listaDeTexto(excluir);
       if (exc.length) p.excluir = exc;
     } else if (categoria === "pecas") {
@@ -213,30 +237,31 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
     <>
       <div className="topbar"><h1>{inicial ? `Editar ${inicial.nome}` : "Nova procura"}</h1></div>
       <form className="card form" onSubmit={(e) => { e.preventDefault(); void submeter(); }}>
-        <div className="grelha">
-          <div className="campo">
-            <label htmlFor="p-nome">Nome</label>
-            <input id="p-nome" className="input" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Placa gráfica RTX 3060" />
+        <div className="campo">
+          <span className="rot">Tipo de produto</span>
+          <div className="marcas" role="radiogroup" aria-label="Tipo de produto">
+            {ORDEM_CAT.map((c) => (
+              <button type="button" key={c} role="radio" aria-checked={categoria === c} className={categoria === c ? "on" : ""}
+                      onClick={() => { setCategoria(c); setCapacidades([]); setModelos([]); setFiltroModelos(""); }}>{NOME_CAT[c]}</button>
+            ))}
           </div>
-          <div className="campo">
-            <span className="rot">Tipo de produto</span>
-            <div className="segmented" style={{ alignSelf: "start", flexWrap: "wrap" }}>
-              {(["ssd", "ram", "monitor", "pecas", "generico"] as Categoria[]).map((c) => (
-                <button type="button" key={c} className={categoria === c ? "on" : ""}
-                        onClick={() => { setCategoria(c); setCapacidades([]); }}>{NOME_CAT[c]}</button>
-              ))}
-            </div>
-          </div>
+        </div>
+        <div className="campo">
+          <label htmlFor="p-nome">Nome</label>
+          <input id="p-nome" className="input" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Placa gráfica RTX 3060" />
         </div>
 
         <div className="campo">
           <label htmlFor="p-termos">O que escrever na pesquisa dos sites</label>
           <input id="p-termos" className="input" value={termos}
                  onChange={(e) => { setTermos(e.target.value); setTermosManuais(true); }}
-                 placeholder={categoria === "generico" ? "Escreve o nome acima e eu sugiro" : "Escolhe as opções abaixo e eu sugiro"} />
+                 placeholder={categoria === "generico" ? "Escreve o nome acima e eu sugiro"
+                   : ehTabela(categoria) ? "Opcional: o programa já pesquisa os modelos que escolheres" : "Escolhe as opções abaixo e eu sugiro"} />
           <span className="ajuda">
             {termosManuais ? "Editados por ti." : "Preenchido sozinho a partir do nome e das opções; podes mudar à vontade."}
-            {" "}Separados por vírgulas. Erros comuns (sdd, disco ssd…) e tamanhos parecidos entram sozinhos na pesquisa.
+            {" "}Separados por vírgulas. {ehTabela(categoria)
+              ? "Cada modelo escolhido entra sozinho, em várias formas de escrever (3060ti, rtx3060ti, gráfica 3060…) e em português, espanhol e francês."
+              : "Erros comuns (sdd, disco ssd…) e tamanhos parecidos entram sozinhos na pesquisa."}
           </span>
           {(() => {
             const n = listaDeTexto(termos).length;
@@ -256,9 +281,9 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
 
         <div className="grelha">
           <div className="campo">
-            <label htmlFor="p-max">Preço máximo (com portes)</label>
-            <input id="p-max" className="input num" inputMode="decimal" value={precoMax} onChange={(e) => setPrecoMax(e.target.value)} placeholder="Ex.: 180" />
-            <span className="ajuda">Também é negócio o que estiver 25% abaixo da mediana do mercado.</span>
+            <label htmlFor="p-max">Preço máximo (com portes){ehTabela(categoria) ? " — opcional" : ""}</label>
+            <input id="p-max" className="input num" inputMode="decimal" value={precoMax} onChange={(e) => setPrecoMax(e.target.value)} placeholder={ehTabela(categoria) ? "Vazio = sem limite" : "Ex.: 180"} />
+            <span className="ajuda">Também é negócio o que estiver abaixo da mediana do mercado: 35% nos artigos até 30 €, 28% até 80 €, 22% até 200 €, 18% até 500 € e 15% acima.</span>
           </div>
           <div className="campo">
             <label htmlFor="p-min">Preço mínimo (opcional)</label>
@@ -302,6 +327,70 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
               <label htmlFor="p-exc-m">Palavras que excluem (opcional)</label>
               <input id="p-exc-m" className="input" value={excluir} onChange={(e) => setExcluir(e.target.value)} placeholder="Ex.: curvo, tn" />
               <span className="ajuda">TVs, monitores de bebé, colunas de estúdio, suportes e lotes já ficam de fora.</span>
+            </div>
+          </>
+        )}
+
+        {ehTabela(categoria) && (
+          <>
+            <div className="campo">
+              <span className="rot">Modelos {modelos.length ? `· ${modelos.length} ${modelos.length === 1 ? "escolhido" : "escolhidos"}` : "(nenhum = todos)"}</span>
+              {catalogo ? (
+                <>
+                  <input className="input" value={filtroModelos} onChange={(e) => setFiltroModelos(e.target.value)}
+                         placeholder="Procurar um modelo (ex.: 3060, iphone 13, t480)" aria-label="Procurar modelo" />
+                  <div className="familias-modelos">
+                    {catalogo.familias.map((f) => {
+                      const q = filtroModelos.trim().toLowerCase().replace(/\s+/g, "");
+                      const ms = q ? f.modelos.filter((m) => m.toLowerCase().replace(/\s+/g, "").includes(q)) : f.modelos;
+                      if (!ms.length) return null;
+                      const todos = ms.every((m) => modelos.includes(m));
+                      return (
+                        <div key={f.familia} className="familia-modelos">
+                          <div className="familia-topo">
+                            <span className="eyebrow">{f.familia}</span>
+                            <button type="button" className="btn ghost peq" onClick={() =>
+                              setModelos(todos ? modelos.filter((m) => !ms.includes(m)) : [...new Set([...modelos, ...ms])])}>
+                              {todos ? "Tirar todos" : "Todos"}
+                            </button>
+                          </div>
+                          <Marcas opcoes={ms} valor={modelos} onChange={setModelos} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <input className="input" value={modelos.join(", ")} onChange={(e) => setModelos(listaDeTexto(e.target.value))}
+                       placeholder="Ex.: RTX 3060 Ti, RX 6600 XT" />
+              )}
+              <span className="ajuda">{categoria === "grafica"
+                ? "Cada modelo e cada memória (3060 12GB e 3060 8GB) têm a sua mediana. Computadores e portáteis com a placa, acessórios, lotes e avariadas ficam de fora."
+                : "Cada modelo tem a sua mediana. Acessórios, peças, réplicas e lotes ficam de fora."}</span>
+            </div>
+            {catalogo && catalogo.capacidades.length > 0 && (
+              <div className="campo"><span className="rot">Capacidade (vazio = todas)</span>
+                <Marcas opcoes={catalogo.capacidades} valor={capacidades} onChange={setCapacidades} rotulo={capTexto} /></div>
+            )}
+            {catalogo?.ram_min && (
+              <div className="campo"><span className="rot">RAM mínima</span>
+                <div className="segmented" style={{ alignSelf: "start", flexWrap: "wrap" }}>
+                  {[0, 8, 16, 32].map((g) => (
+                    <button type="button" key={g} className={ramMin === g ? "on" : ""} onClick={() => setRamMin(g)}>{g ? `${g} GB` : "Tanto faz"}</button>
+                  ))}
+                </div>
+                <span className="ajuda">Anúncios que não dizem a RAM entram.</span></div>
+            )}
+            <div className="grelha">
+              <div className="campo">
+                <label htmlFor="p-lucro">Lucro mínimo (€)</label>
+                <input id="p-lucro" className="input num" inputMode="decimal" value={lucroMin} onChange={(e) => setLucroMin(e.target.value)} placeholder="5" />
+                <span className="ajuda">Só avisa se, revendendo ao preço da mediana, ganhares pelo menos isto.</span>
+              </div>
+              <div className="campo">
+                <label htmlFor="p-exc-t">Palavras que excluem (opcional)</label>
+                <input id="p-exc-t" className="input" value={excluir} onChange={(e) => setExcluir(e.target.value)} placeholder="Ex.: blower, mining" />
+              </div>
             </div>
           </>
         )}

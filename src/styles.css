@@ -336,3 +336,19 @@ code.k { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; fon
   .balanco-frase { font-size: 15px; }
   .balanco-pct { font-size: 22px; }
 }
+
+/* Editor: modelos por família */
+.familias-modelos { display: grid; gap: 12px; max-height: 420px; overflow: auto; padding: 4px 2px; }
+.familia-modelos { display: grid; gap: 6px; }
+.familia-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+/* Negócios: lucro, níveis e suspeitos */
+.lucro-linha { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.lucro-v { font-size: 20px; font-weight: 800; color: var(--new); font-variant-numeric: tabular-nums; }
+.tag.nivel.bom { background: color-mix(in srgb, var(--primary) 18%, transparent); color: var(--primary); }
+.tag.nivel.muito-bom { background: color-mix(in srgb, var(--deal) 20%, transparent); color: var(--deal); }
+.tag.nivel.pechincha { background: var(--deal); color: var(--on-deal); }
+.card.deal.nivel-pechincha { box-shadow: inset 0 0 0 2px var(--deal); }
+.suspeito { font-size: 13px; font-weight: 700; color: var(--warn); }
+.v.lucro { color: var(--new); }
+.tag.nivel.limite { background: var(--surface-3, #262a33); color: var(--muted); }

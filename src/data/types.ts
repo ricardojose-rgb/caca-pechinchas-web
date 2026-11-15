@@ -30,6 +30,14 @@ export interface Negocio {
   ultimo_visto: string;
   unidades?: number;
   abaixo_do_novo: number | null;
+  /** lucro estimado em € se revenderes ao preço da mediana */
+  lucro?: number | null;
+  /** quantos anúncios entram na mediana */
+  amostra?: number;
+  nivel?: "" | "limite" | "bom" | "muito bom" | "pechincha";
+  suspeito?: string;
+  /** o mesmo artigo noutros sites */
+  tambem_em?: { fonte: Fonte; url: string; total: number }[];
   /** artigo de um anúncio com vários artigos (cada um com o seu preço) */
   lote?: { titulo: string; artigos: number; quantidade: number };
 }
@@ -59,6 +67,14 @@ export interface Negocios {
   procuras: ResultadoProcura[];
   compras: { n: number; investido: number; vendidas: number; lucro: number };
   favoritos?: { n: number; alertas: AlertaFavorito[] };
+  catalogo?: Record<string, CatalogoTipo>;
+}
+
+export interface CatalogoTipo {
+  nome: string;
+  familias: { familia: string; modelos: string[] }[];
+  capacidades: number[];
+  ram_min: boolean;
 }
 
 export interface AlertaFavorito {
@@ -108,7 +124,9 @@ export interface FavoritoVisto {
   erro?: string;
 }
 
-export type Categoria = "ssd" | "ram" | "monitor" | "pecas" | "generico";
+export type Categoria = "ssd" | "ram" | "monitor" | "pecas" | "generico" | "grafica" | "processador"
+  | "telemovel" | "consola" | "portatil" | "minipc" | "tablet" | "audio";
+export const TIPOS_TABELA: Categoria[] = ["grafica", "processador", "telemovel", "consola", "portatil", "minipc", "tablet", "audio"];
 
 export interface Procura {
   id: string;
@@ -135,6 +153,11 @@ export interface Procura {
   hz_min?: number;
   // PCs às peças
   margem_minima?: number;
+  // tipos com tabela de modelos (gráfica, processador, telemóvel…)
+  modelos?: string[];
+  ram_min?: number;
+  lucro_minimo?: number;
+  desconto_minimo?: number;
   // genérico
   obrigatorio?: string[];
   excluir?: string[];

@@ -1,4 +1,4 @@
-import type { Categoria } from "./types";
+import { TIPOS_TABELA, type Categoria } from "./types";
 
 // Como os anúncios costumam escrever cada tamanho de SSD (igual ao script Python).
 const TAMANHOS_IRMAOS: Record<number, string[]> = {
@@ -35,10 +35,14 @@ export interface DadosSugestao {
   hzMin?: number;
   modulos?: string;
   baixaVoltagem?: boolean;
+  modelos?: string[];
 }
 
 /** Termos de pesquisa sugeridos a partir do nome e das opções escolhidas. */
 export function sugerirTermos(d: DadosSugestao): string[] {
+  // tipos com tabela de modelos: o motor já junta os termos largos e as formas de escrever;
+  // aqui ficam só os modelos escolhidos (vazio = o motor procura tudo)
+  if (TIPOS_TABELA.includes(d.categoria)) return unicos((d.modelos ?? []).map((m) => normalizar(m)));
   if (d.categoria === "ssd") {
     // sem tamanho escolhido = todos os tamanhos: termos largos (o script junta os de cada tamanho, a rodar)
     if (!d.capacidades.length) return ["ssd", "disco ssd", "nvme", "ssd m.2", "disco solido", "sdd", "disco duro ssd", "disque ssd"];
