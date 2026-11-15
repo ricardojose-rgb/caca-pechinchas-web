@@ -126,6 +126,7 @@ function resumoFiltros(p: Procura): string {
   if (p.excluir?.length) partes.push(`sem ${p.excluir.join(", ")}`);
   if (p.modelos?.length) partes.push(p.modelos.length > 4 ? `${p.modelos.slice(0, 4).join(", ")} e mais ${p.modelos.length - 4}` : p.modelos.join(", "));
   else if (ehTabela(p.categoria)) partes.push("todos os modelos");
+  if (p.processadores?.length) partes.push(`só ${p.processadores.join("/")}`);
   if (p.ram_min) partes.push(`${p.ram_min} GB de RAM ou mais`);
   if (p.lucro_minimo) partes.push(`lucro ≥ ${p.lucro_minimo} €`);
   if (p.categoria === "pecas") partes.push(`margem mínima ${p.margem_minima ?? 15} €`);
@@ -161,6 +162,7 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
   const [modelos, setModelos] = useState<string[]>(inicial?.modelos ?? []);
   const [filtroModelos, setFiltroModelos] = useState("");
   const [ramMin, setRamMin] = useState<number>(inicial?.ram_min ?? 0);
+  const [processadores, setProcessadores] = useState<string[]>(inicial?.processadores ?? []);
   const [lucroMin, setLucroMin] = useState(inicial?.lucro_minimo != null ? String(inicial.lucro_minimo) : "");
   const catalogo = useDados().negocios?.catalogo?.[categoria] as CatalogoTipo | undefined;
   // os termos preenchem-se sozinhos até os editares à mão (numa procura existente, ficam os teus)
@@ -188,7 +190,7 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
     // mantém campos que o site não edita (ex.: páginas, desconto_minimo)
     const p: Procura = { ...(inicial ?? {}), id, nome: nome.trim(), categoria, termos: listaTermos, preco_max: max,
       ativa: inicial?.ativa ?? true } as Procura;
-    for (const k of ["preco_min", "capacidades", "interfaces", "incluir_externos", "ddr", "formatos", "obrigatorio", "excluir", "variantes", "margem_minima", "polegadas", "resolucoes", "hz_min", "modulos", "velocidades", "baixa_voltagem", "formato_estrito", "modelos", "ram_min", "lucro_minimo"]) delete p[k];
+    for (const k of ["preco_min", "capacidades", "interfaces", "incluir_externos", "ddr", "formatos", "obrigatorio", "excluir", "variantes", "margem_minima", "polegadas", "resolucoes", "hz_min", "modulos", "velocidades", "baixa_voltagem", "formato_estrito", "modelos", "ram_min", "lucro_minimo", "processadores"]) delete p[k];
     const lucro = lucroMin.trim() ? Number(lucroMin.replace(",", ".")) : NaN;
     if (Number.isFinite(lucro) && lucro >= 0) p.lucro_minimo = lucro;
     if (min > 0) p.preco_min = min;
@@ -206,6 +208,7 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
       if (modelos.length) p.modelos = modelos;
       if (capacidades.length) p.capacidades = [...capacidades].sort((a, b) => a - b);
       if (ramMin > 0) p.ram_min = ramMin;
+      if (processadores.length) p.processadores = processadores;
       const exc = listaDeTexto(excluir);
       if (exc.length) p.excluir = exc;
     } else if (categoria === "pecas") {
@@ -242,7 +245,7 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
           <div className="marcas" role="radiogroup" aria-label="Tipo de produto">
             {ORDEM_CAT.map((c) => (
               <button type="button" key={c} role="radio" aria-checked={categoria === c} className={categoria === c ? "on" : ""}
-                      onClick={() => { setCategoria(c); setCapacidades([]); setModelos([]); setFiltroModelos(""); }}>{NOME_CAT[c]}</button>
+                      onClick={() => { setCategoria(c); setCapacidades([]); setModelos([]); setFiltroModelos(""); setProcessadores([]); }}>{NOME_CAT[c]}</button>
             ))}
           </div>
         </div>
@@ -371,6 +374,11 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
             {catalogo && catalogo.capacidades.length > 0 && (
               <div className="campo"><span className="rot">Capacidade (vazio = todas)</span>
                 <Marcas opcoes={catalogo.capacidades} valor={capacidades} onChange={setCapacidades} rotulo={capTexto} /></div>
+            )}
+            {catalogo?.processadores && catalogo.processadores.length > 0 && (
+              <div className="campo"><span className="rot">Processador (vazio = todos)</span>
+                <Marcas opcoes={catalogo.processadores} valor={processadores} onChange={setProcessadores} />
+                <span className="ajuda">Ex.: marca i5 e i7 para deixar de fora os i3 e os Celeron. Anúncios que não dizem o processador entram.</span></div>
             )}
             {catalogo?.ram_min && (
               <div className="campo"><span className="rot">RAM mínima</span>

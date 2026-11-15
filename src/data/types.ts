@@ -75,6 +75,7 @@ export interface CatalogoTipo {
   familias: { familia: string; modelos: string[] }[];
   capacidades: number[];
   ram_min: boolean;
+  processadores?: string[];
 }
 
 export interface AlertaFavorito {
@@ -156,6 +157,7 @@ export interface Procura {
   // tipos com tabela de modelos (gráfica, processador, telemóvel…)
   modelos?: string[];
   ram_min?: number;
+  processadores?: string[];
   lucro_minimo?: number;
   desconto_minimo?: number;
   // genérico
