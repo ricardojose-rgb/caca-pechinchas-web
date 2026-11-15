@@ -5,7 +5,7 @@ import { euros, eurosCurto, FONTES, haQuanto, hoje, NOME_FONTE, pais } from "../
 import { juntarCompra, type Negocio, type ResultadoProcura } from "../data/types";
 import { Foto, PontoFonte, TagFonte, Vazio, CopiarNome, Galeria } from "../ui/components";
 
-type Ordem = "lucro" | "desconto" | "preco" | "recentes";
+type Ordem = "desconto" | "preco" | "recentes";
 const NIVEL_ORD: Record<string, number> = { pechincha: 4, "muito bom": 3, bom: 2, limite: 1 };
 const NIVEL_TXT: Record<string, string> = { pechincha: "Pechincha", "muito bom": "Muito bom", bom: "Bom", limite: "No teu limite" };
 type Item = Negocio & { procuraId: string; procuraNome: string };
@@ -24,7 +24,7 @@ export default function NegociosEcra({ irPara }: { irPara: (e: "procuras" | "def
   const d = useDados();
   const [procura, setProcuraS] = useState<string>(() => lerPref("procura", "todas"));
   const [fontes, setFontesS] = useState<string[]>(() => lerPref("fontes", [] as string[]));
-  const [ordem, setOrdemS] = useState<Ordem>(() => lerPref("ordem", "lucro" as Ordem));
+  const [ordem, setOrdemS] = useState<Ordem>(() => { const o = lerPref("ordem", "desconto" as Ordem); return ["desconto", "preco", "recentes"].includes(o) ? o : "desconto"; });
   const [soNovos, setSoNovosS] = useState<boolean>(() => lerPref("soNovos", false));
   const [comprados, setComprados] = useState<Set<string>>(new Set());
 
@@ -74,12 +74,10 @@ export default function NegociosEcra({ irPara }: { irPara: (e: "procuras" | "def
   lista = [...lista].sort((a, b) =>
     ordem === "preco" ? a.total - b.total
       : ordem === "recentes" ? b.primeiro_visto.localeCompare(a.primeiro_visto)
-        : ordem === "lucro" ? (NIVEL_ORD[b.nivel ?? ""] ?? 0) - (NIVEL_ORD[a.nivel ?? ""] ?? 0) || (b.lucro ?? 0) - (a.lucro ?? 0)
-          : b.desconto - a.desconto || a.total - b.total);
+        : (NIVEL_ORD[b.nivel ?? ""] ?? 0) - (NIVEL_ORD[a.nivel ?? ""] ?? 0) || b.desconto - a.desconto || a.total - b.total);
 
   const novos = todos.filter((x) => ehNovo(x, n.atualizado)).length;
   const melhor = todos.reduce((m, x) => (x.referencia && x.desconto > m ? x.desconto : m), 0);
-  const lucroTotal = todos.reduce((s, x) => s + Math.max(0, x.lucro ?? 0), 0);
   const pechinchas = todos.filter((x) => x.nivel === "pechincha").length;
   const lidos = Object.values(n.estado_fontes).reduce((s, e) => s + e.lidos, 0);
   const falhados = Object.entries(n.estado_fontes).filter(([, e]) => !e.ok).map(([k]) => NOME_FONTE[k] ?? k);
@@ -99,8 +97,7 @@ export default function NegociosEcra({ irPara }: { irPara: (e: "procuras" | "def
         <div className="card cel"><span className="eyebrow">Negócios agora</span><span className="v">{todos.length}</span></div>
         <div className="card cel"><span className="eyebrow">Recentes (24 h)</span><span className="v">{novos}</span></div>
         <div className="card cel"><span className="eyebrow">Pechinchas</span><span className="v">{pechinchas}</span></div>
-        <div className="card cel"><span className="eyebrow">Lucro possível</span><span className="v lucro">{lucroTotal ? `+${eurosCurto(Math.round(lucroTotal))}` : "—"}</span></div>
-        <div className="card cel secundaria"><span className="eyebrow">Maior desconto</span><span className="v">{melhor ? `−${Math.round(melhor * 100)}%` : "—"}</span></div>
+        <div className="card cel"><span className="eyebrow">Maior desconto</span><span className="v">{melhor ? `−${Math.round(melhor * 100)}%` : "—"}</span></div>
         <div className="card cel secundaria"><span className="eyebrow">Anúncios analisados</span><span className="v">{lidos.toLocaleString("pt-PT")}</span></div>
       </div>
 
@@ -129,9 +126,9 @@ export default function NegociosEcra({ irPara }: { irPara: (e: "procuras" | "def
             <button className={`chip ${soNovos ? "on" : ""}`} aria-pressed={soNovos} onClick={() => setSoNovos(!soNovos)}>Só recentes</button>
           </div>
           <div className="segmented" role="group" aria-label="Ordenar">
-            {(["lucro", "desconto", "preco", "recentes"] as Ordem[]).map((o) => (
+            {(["desconto", "preco", "recentes"] as Ordem[]).map((o) => (
               <button key={o} className={ordem === o ? "on" : ""} onClick={() => setOrdem(o)}>
-                {o === "lucro" ? "Lucro" : o === "desconto" ? "Desconto" : o === "preco" ? "Preço" : "Recentes"}
+                {o === "desconto" ? "Desconto" : o === "preco" ? "Preço" : "Recentes"}
               </button>
             ))}
           </div>
@@ -239,7 +236,6 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
   const ePecas = x.grupo === "portátil" || x.grupo === "desktop";
   const poucoVisivel = (x.atributos?.pouco_visivel as string) || "";
   const desconto = x.referencia ? Math.round(x.desconto * 100) : null;
-  const lucro = x.lucro ?? (x.margem_revenda != null ? Math.round(x.margem_revenda) : null);
   return (
     <article className={`card deal ${x.nivel ? `nivel-${x.nivel.replace(" ", "-")}` : ""}`}>
       <button type="button" className="foto-botao" onClick={() => setGaleria(true)}
@@ -254,13 +250,6 @@ function CartaoNegocio({ x, mostrarProcura, atualizado, onComprado }: {
           {desconto != null && desconto > 0 && <span className="tag deal"><TrendingDown size={12} />−{desconto}%</span>}
           {x.nivel && <span className={`tag nivel ${x.nivel.replace(" ", "-")}`}>{NIVEL_TXT[x.nivel]}</span>}
         </div>
-        {lucro != null && lucro > 0 && !ePecas && (
-          <div className="lucro-linha">
-            <span className="lucro-v">+{eurosCurto(lucro)}</span>
-            <span className="small muted">de lucro se revenderes a {eurosCurto(Math.round(x.referencia ?? 0))}
-              {x.amostra ? <> · mediana de {x.amostra} anúncios{x.amostra < 8 ? " (poucos)" : ""}</> : null}</span>
-          </div>
-        )}
         {x.suspeito && <div className="suspeito" role="note">⚠ {x.suspeito}</div>}
         <div className="decomp">{decomposicao(x)}</div>
         <div className="nome"><a className="titulo clamp2" href={x.url} target="_blank" rel="noreferrer">{x.titulo}</a><CopiarNome texto={x.titulo} /></div>
