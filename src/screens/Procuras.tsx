@@ -8,10 +8,10 @@ import { BotaoApagar, Marcas, Switch, Vazio } from "../ui/components";
 
 const NOME_CAT: Record<Categoria, string> = {
   hdd: "Disco rígido (HDD)", ssd: "SSD", ram: "Memória RAM", monitor: "Monitor", grafica: "Placa gráfica", processador: "Processador",
-  minipc: "Mini PC", portatil: "Portátil", telemovel: "Telemóvel", tablet: "Tablet", consola: "Consola",
+  minipc: "Mini PC", sff: "PC SFF (caixa baixa)", portatil: "Portátil", telemovel: "Telemóvel", tablet: "Tablet", consola: "Consola",
   audio: "Auscultadores e relógios", pecas: "PC às peças", generico: "Outro produto",
 };
-const ORDEM_CAT: Categoria[] = ["ssd", "hdd", "ram", "grafica", "processador", "monitor", "minipc", "portatil", "telemovel",
+const ORDEM_CAT: Categoria[] = ["ssd", "hdd", "ram", "grafica", "processador", "monitor", "minipc", "sff", "portatil", "telemovel",
   "tablet", "consola", "audio", "pecas", "generico"];
 const ehTabela = (c: Categoria) => TIPOS_TABELA.includes(c);
 const CAP_SSD = [64, 128, 180, 250, 500, 750, 1000, 2000, 4000];

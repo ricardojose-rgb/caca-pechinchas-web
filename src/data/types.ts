@@ -136,8 +136,8 @@ export interface FavoritoVisto {
 }
 
 export type Categoria = "ssd" | "ram" | "monitor" | "pecas" | "generico" | "grafica" | "processador"
-  | "telemovel" | "consola" | "portatil" | "minipc" | "tablet" | "audio" | "hdd";
-export const TIPOS_TABELA: Categoria[] = ["hdd", "grafica", "processador", "telemovel", "consola", "portatil", "minipc", "tablet", "audio"];
+  | "telemovel" | "consola" | "portatil" | "minipc" | "sff" | "tablet" | "audio" | "hdd";
+export const TIPOS_TABELA: Categoria[] = ["hdd", "grafica", "processador", "telemovel", "consola", "portatil", "minipc", "sff", "tablet", "audio"];
 
 export interface Procura {
   id: string;
