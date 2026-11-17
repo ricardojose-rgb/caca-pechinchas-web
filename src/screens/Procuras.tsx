@@ -7,11 +7,11 @@ import { TIPOS_TABELA, type CatalogoTipo, type Categoria, type Procura } from ".
 import { BotaoApagar, Marcas, Switch, Vazio } from "../ui/components";
 
 const NOME_CAT: Record<Categoria, string> = {
-  ssd: "SSD", ram: "Memória RAM", monitor: "Monitor", grafica: "Placa gráfica", processador: "Processador",
+  hdd: "Disco rígido (HDD)", ssd: "SSD", ram: "Memória RAM", monitor: "Monitor", grafica: "Placa gráfica", processador: "Processador",
   minipc: "Mini PC", portatil: "Portátil", telemovel: "Telemóvel", tablet: "Tablet", consola: "Consola",
   audio: "Auscultadores e relógios", pecas: "PC às peças", generico: "Outro produto",
 };
-const ORDEM_CAT: Categoria[] = ["ssd", "ram", "grafica", "processador", "monitor", "minipc", "portatil", "telemovel",
+const ORDEM_CAT: Categoria[] = ["ssd", "hdd", "ram", "grafica", "processador", "monitor", "minipc", "portatil", "telemovel",
   "tablet", "consola", "audio", "pecas", "generico"];
 const ehTabela = (c: Categoria) => TIPOS_TABELA.includes(c);
 const CAP_SSD = [64, 128, 180, 250, 500, 750, 1000, 2000, 4000];
@@ -128,6 +128,12 @@ function resumoFiltros(p: Procura): string {
   else if (ehTabela(p.categoria)) partes.push("todos os modelos");
   if (p.processadores?.length) partes.push(`só ${p.processadores.join("/")}`);
   if (p.ram_min) partes.push(`${p.ram_min} GB de RAM ou mais`);
+  if (p.categoria === "hdd") {
+    const x = p as unknown as Record<string, unknown>;
+    if (Array.isArray(x.formatos) && x.formatos.length) partes.push(x.formatos.map((f) => `${f}"`).join(" / "));
+    if (x.rpm_min) partes.push(`≥ ${x.rpm_min} rpm`);
+    if (x.incluir_externos) partes.push("inclui externos");
+  }
   if (p.lucro_minimo) partes.push(`lucro ≥ ${p.lucro_minimo} €`);
   if (p.categoria === "pecas") partes.push(`margem mínima ${p.margem_minima ?? 15} €`);
   return partes.join(" · ");
@@ -163,6 +169,12 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
   const [filtroModelos, setFiltroModelos] = useState("");
   const [ramMin, setRamMin] = useState<number>(inicial?.ram_min ?? 0);
   const [processadores, setProcessadores] = useState<string[]>(inicial?.processadores ?? []);
+  // opções próprias do tipo (formato, rpm… nos HDD), guardadas tal como vêm do catálogo
+  const [extras, setExtras] = useState<Record<string, unknown>>(() => {
+    const o: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(inicial ?? {})) if (["formatos", "rpm_min", "incluir_externos", "incluir_sas", "incluir_sshd"].includes(k)) o[k] = v;
+    return o;
+  });
   const [lucroMin, setLucroMin] = useState(inicial?.lucro_minimo != null ? String(inicial.lucro_minimo) : "");
   const catalogo = useDados().negocios?.catalogo?.[categoria] as CatalogoTipo | undefined;
   // os termos preenchem-se sozinhos até os editares à mão (numa procura existente, ficam os teus)
@@ -191,6 +203,7 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
     const p: Procura = { ...(inicial ?? {}), id, nome: nome.trim(), categoria, termos: listaTermos, preco_max: max,
       ativa: inicial?.ativa ?? true } as Procura;
     for (const k of ["preco_min", "capacidades", "interfaces", "incluir_externos", "ddr", "formatos", "obrigatorio", "excluir", "variantes", "margem_minima", "polegadas", "resolucoes", "hz_min", "modulos", "velocidades", "baixa_voltagem", "formato_estrito", "modelos", "ram_min", "lucro_minimo", "processadores"]) delete p[k];
+    for (const e of catalogo?.extras ?? []) delete (p as unknown as Record<string, unknown>)[e.campo];
     const lucro = lucroMin.trim() ? Number(lucroMin.replace(",", ".")) : NaN;
     if (Number.isFinite(lucro) && lucro >= 0) p.lucro_minimo = lucro;
     if (min > 0) p.preco_min = min;
@@ -209,6 +222,11 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
       if (capacidades.length) p.capacidades = [...capacidades].sort((a, b) => a - b);
       if (ramMin > 0) p.ram_min = ramMin;
       if (processadores.length) p.processadores = processadores;
+      for (const e of catalogo?.extras ?? []) {
+        const v = extras[e.campo];
+        if (v === undefined || v === false || v === 0 || (Array.isArray(v) && v.length === 0)) continue;
+        (p as unknown as Record<string, unknown>)[e.campo] = v;
+      }
       const exc = listaDeTexto(excluir);
       if (exc.length) p.excluir = exc;
     } else if (categoria === "pecas") {
@@ -245,7 +263,7 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
           <div className="marcas" role="radiogroup" aria-label="Tipo de produto">
             {ORDEM_CAT.map((c) => (
               <button type="button" key={c} role="radio" aria-checked={categoria === c} className={categoria === c ? "on" : ""}
-                      onClick={() => { setCategoria(c); setCapacidades([]); setModelos([]); setFiltroModelos(""); setProcessadores([]); }}>{NOME_CAT[c]}</button>
+                      onClick={() => { setCategoria(c); setCapacidades([]); setModelos([]); setFiltroModelos(""); setProcessadores([]); setExtras({}); }}>{NOME_CAT[c]}</button>
             ))}
           </div>
         </div>
@@ -367,7 +385,9 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
                 <input className="input" value={modelos.join(", ")} onChange={(e) => setModelos(listaDeTexto(e.target.value))}
                        placeholder="Ex.: RTX 3060 Ti, RX 6600 XT" />
               )}
-              <span className="ajuda">{categoria === "grafica"
+              <span className="ajuda">{categoria === "hdd"
+                ? "Linhas de disco: vazio = todas. Cada capacidade e formato têm a sua mediana; SSD, caixas, NAS, lotes e computadores ficam de fora."
+                : categoria === "grafica"
                 ? "Cada modelo e cada memória (3060 12GB e 3060 8GB) têm a sua mediana. Computadores e portáteis com a placa, acessórios, lotes e avariadas ficam de fora."
                 : "Cada modelo tem a sua mediana. Acessórios, peças, réplicas e lotes ficam de fora."}</span>
             </div>
@@ -375,6 +395,36 @@ function Editor({ inicial, existentes, onGuardar, onCancelar, onApagar }: {
               <div className="campo"><span className="rot">Capacidade (vazio = todas)</span>
                 <Marcas opcoes={catalogo.capacidades} valor={capacidades} onChange={setCapacidades} rotulo={capTexto} /></div>
             )}
+            {(catalogo?.extras ?? []).map((e) => (
+              <div className="campo" key={e.campo}>
+                {e.tipo === "bool" ? (
+                  <label className="check">
+                    <input type="checkbox" checked={Boolean(extras[e.campo])}
+                           onChange={(ev) => setExtras({ ...extras, [e.campo]: ev.target.checked })} />
+                    {e.rotulo}
+                  </label>
+                ) : (
+                  <>
+                    <span className="rot">{e.rotulo}</span>
+                    <div className="marcas">
+                      {(e.opcoes ?? []).map((o) => {
+                        const atual = extras[e.campo];
+                        const on = e.tipo === "multi" ? Array.isArray(atual) && atual.includes(o.valor) : (atual ?? 0) === o.valor;
+                        return (
+                          <button type="button" key={String(o.valor)} className={on ? "on" : ""} onClick={() => {
+                            if (e.tipo === "multi") {
+                              const l = Array.isArray(atual) ? atual : [];
+                              setExtras({ ...extras, [e.campo]: on ? l.filter((x) => x !== o.valor) : [...l, o.valor] });
+                            } else setExtras({ ...extras, [e.campo]: o.valor });
+                          }}>{o.texto}</button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+                {e.ajuda && <span className="ajuda">{e.ajuda}</span>}
+              </div>
+            ))}
             {catalogo?.processadores && catalogo.processadores.length > 0 && (
               <div className="campo"><span className="rot">Processador (vazio = todos)</span>
                 <Marcas opcoes={catalogo.processadores} valor={processadores} onChange={setProcessadores} />

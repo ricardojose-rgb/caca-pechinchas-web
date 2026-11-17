@@ -352,3 +352,5 @@ code.k { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; fon
 .suspeito { font-size: 13px; font-weight: 700; color: var(--warn); }
 .v.lucro { color: var(--new); }
 .tag.nivel.limite { background: var(--surface-3, #262a33); color: var(--muted); }
+.check { display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--primary); }

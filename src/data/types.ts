@@ -76,6 +76,16 @@ export interface CatalogoTipo {
   capacidades: number[];
   ram_min: boolean;
   processadores?: string[];
+  extras?: OpcaoExtra[];
+}
+
+/** Opção própria de um tipo (ex.: formato e rpm nos HDD), desenhada pelo editor. */
+export interface OpcaoExtra {
+  campo: string;
+  rotulo: string;
+  tipo: "multi" | "unico" | "bool";
+  opcoes?: { valor: string | number; texto: string }[];
+  ajuda?: string;
 }
 
 export interface AlertaFavorito {
@@ -126,8 +136,8 @@ export interface FavoritoVisto {
 }
 
 export type Categoria = "ssd" | "ram" | "monitor" | "pecas" | "generico" | "grafica" | "processador"
-  | "telemovel" | "consola" | "portatil" | "minipc" | "tablet" | "audio";
-export const TIPOS_TABELA: Categoria[] = ["grafica", "processador", "telemovel", "consola", "portatil", "minipc", "tablet", "audio"];
+  | "telemovel" | "consola" | "portatil" | "minipc" | "tablet" | "audio" | "hdd";
+export const TIPOS_TABELA: Categoria[] = ["hdd", "grafica", "processador", "telemovel", "consola", "portatil", "minipc", "tablet", "audio"];
 
 export interface Procura {
   id: string;
